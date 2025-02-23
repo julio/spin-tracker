@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:googleapis_auth/auth_io.dart' as auth;
-import 'package:vinyl_checker/config.dart'; // Import the config file
+import 'package:vinyl_checker/config.dart';
 
 void main() {
   runApp(const VinylCheckerApp());
@@ -37,6 +37,8 @@ class VinylHomePageState extends State<VinylHomePage> {
   String? selectedAlbum;
   String ownershipStatus = '';
   late SheetsApi sheetsApi;
+  int artistIndex = -1; // Store indices globally
+  int albumIndex = -1;
 
   @override
   void initState() {
@@ -69,7 +71,7 @@ class VinylHomePageState extends State<VinylHomePage> {
     try {
       // Fetch headers to find column indices
       final ownedHeaders = await sheetsApi.spreadsheets.values.get(
-        spreadsheetId, // Using the constant from config.dart
+        spreadsheetId,
         'Owned!A1:Z1',
       );
       final wantedHeaders = await sheetsApi.spreadsheets.values.get(
@@ -80,8 +82,8 @@ class VinylHomePageState extends State<VinylHomePage> {
       // Find "Artist" and "Album" column indices (0-based)
       final ownedHeaderList = ownedHeaders.values?.first ?? [];
       final wantedHeaderList = wantedHeaders.values?.first ?? [];
-      int artistIndex = ownedHeaderList.indexOf('Artist');
-      int albumIndex = ownedHeaderList.indexOf('Album');
+      artistIndex = ownedHeaderList.indexOf('Artist');
+      albumIndex = ownedHeaderList.indexOf('Album');
       if (artistIndex == -1 || albumIndex == -1) {
         print(
           'Error: "Artist" or "Album" not found in Owned headers: $ownedHeaderList',
@@ -156,36 +158,60 @@ class VinylHomePageState extends State<VinylHomePage> {
     }
   }
 
-  void _checkOwnership() {
+  Future<void> _checkOwnership() async {
     if (selectedArtist == null || selectedAlbum == null) {
       setState(() => ownershipStatus = 'Please select both fields.');
       return;
     }
 
-    sheetsApi.spreadsheets.values.get(spreadsheetId, 'Owned!A2:B').then((
-      owned,
-    ) {
-      sheetsApi.spreadsheets.values.get(spreadsheetId, 'Wanted!A2:B').then((
-        wanted,
-      ) {
-        final ownedMatch = owned.values?.any(
-          (row) => row[0] == selectedArtist && row[1] == selectedAlbum,
-        );
-        final wantedMatch = wanted.values?.any(
-          (row) => row[0] == selectedArtist && row[1] == selectedAlbum,
-        );
+    try {
+      // Fetch data using same range as _fetchData
+      final ownedResponse = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        'Owned!A2:Z',
+      );
+      final wantedResponse = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        'Wanted!A2:Z',
+      );
 
-        setState(() {
-          if (ownedMatch == true) {
-            ownershipStatus = 'You own this album!';
-          } else if (wantedMatch == true) {
-            ownershipStatus = 'You want this album!';
-          } else {
-            ownershipStatus = 'Not in your collection or wishlist.';
-          }
-        });
+      final ownedData = ownedResponse.values;
+      final wantedData = wantedResponse.values;
+
+      print('Checking ownership for: $selectedArtist - $selectedAlbum');
+      print('Owned data for check: $ownedData');
+      print('Wanted data for check: $wantedData');
+
+      final ownedMatch =
+          ownedData?.any((row) {
+            return row.length > albumIndex &&
+                row[artistIndex] == selectedArtist &&
+                row[albumIndex] == selectedAlbum;
+          }) ??
+          false;
+
+      final wantedMatch =
+          wantedData?.any((row) {
+            return row.length > albumIndex &&
+                row[artistIndex] == selectedArtist &&
+                row[albumIndex] == selectedAlbum;
+          }) ??
+          false;
+
+      setState(() {
+        if (ownedMatch) {
+          ownershipStatus = 'You own this album!';
+        } else if (wantedMatch) {
+          ownershipStatus = 'You want this album!';
+        } else {
+          ownershipStatus = 'Not in your collection or wishlist.';
+        }
+        print('Ownership status: $ownershipStatus');
       });
-    });
+    } catch (e) {
+      print('Error checking ownership: $e');
+      setState(() => ownershipStatus = 'Error checking ownership');
+    }
   }
 
   bool _filterArtists(String item, String filter) {
