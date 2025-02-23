@@ -32,13 +32,20 @@ class VinylHomePage extends StatefulWidget {
 
 class VinylHomePageState extends State<VinylHomePage> {
   List<String> artists = [];
-  List<String> albums = [];
+  List<String> ownedAlbums = [];
+  List<String> wantedAlbums = [];
   String? selectedArtist;
-  String? selectedAlbum;
+  String? selectedOwnedAlbum;
+  String? selectedWantedAlbum;
   String ownershipStatus = '';
   late SheetsApi sheetsApi;
-  int artistIndex = -1; // Store indices globally
-  int albumIndex = -1;
+  int ownedArtistIndex = -1;
+  int ownedAlbumIndex = -1;
+  int wantedArtistIndex = -1;
+  int wantedAlbumIndex = -1;
+  int wantedCheckIndex = -1; // New index for "Check" column
+  List<List<dynamic>> ownedData = [];
+  List<List<dynamic>> wantedData = [];
 
   @override
   void initState() {
@@ -69,7 +76,6 @@ class VinylHomePageState extends State<VinylHomePage> {
 
   Future<void> _fetchData() async {
     try {
-      // Fetch headers to find column indices
       final ownedHeaders = await sheetsApi.spreadsheets.values.get(
         spreadsheetId,
         'Owned!A1:Z1',
@@ -79,93 +85,130 @@ class VinylHomePageState extends State<VinylHomePage> {
         'Wanted!A1:Z1',
       );
 
-      // Find "Artist" and "Album" column indices (0-based)
       final ownedHeaderList = ownedHeaders.values?.first ?? [];
       final wantedHeaderList = wantedHeaders.values?.first ?? [];
-      artistIndex = ownedHeaderList.indexOf('Artist');
-      albumIndex = ownedHeaderList.indexOf('Album');
-      if (artistIndex == -1 || albumIndex == -1) {
+
+      ownedArtistIndex = ownedHeaderList.indexOf('Artist');
+      ownedAlbumIndex = ownedHeaderList.indexOf('Album');
+      wantedArtistIndex = wantedHeaderList.indexOf('Artist');
+      wantedAlbumIndex = wantedHeaderList.indexOf('Album');
+      wantedCheckIndex = wantedHeaderList.indexOf('Check');
+
+      if (ownedArtistIndex == -1 || ownedAlbumIndex == -1) {
         print(
           'Error: "Artist" or "Album" not found in Owned headers: $ownedHeaderList',
         );
         return;
       }
-      if (wantedHeaderList.indexOf('Artist') != artistIndex ||
-          wantedHeaderList.indexOf('Album') != albumIndex) {
-        print('Warning: Header mismatch between Owned and Wanted');
-        print('Owned headers: $ownedHeaderList');
-        print('Wanted headers: $wantedHeaderList');
+      if (wantedArtistIndex == -1 ||
+          wantedAlbumIndex == -1 ||
+          wantedCheckIndex == -1) {
+        print(
+          'Error: "Artist", "Album", or "Check" not found in Wanted headers: $wantedHeaderList',
+        );
+        return;
       }
 
-      // Fetch all data from row 2 onward
-      final ownedData = await sheetsApi.spreadsheets.values.get(
+      print('Owned indices: artist=$ownedArtistIndex, album=$ownedAlbumIndex');
+      print(
+        'Wanted indices: artist=$wantedArtistIndex, album=$wantedAlbumIndex, check=$wantedCheckIndex',
+      );
+
+      final ownedResponse = await sheetsApi.spreadsheets.values.get(
         spreadsheetId,
         'Owned!A2:Z',
       );
-      final wantedData = await sheetsApi.spreadsheets.values.get(
+      final wantedResponse = await sheetsApi.spreadsheets.values.get(
         spreadsheetId,
         'Wanted!A2:Z',
       );
 
-      // Debug raw data
-      print('Owned data: ${ownedData.values}');
-      print('Wanted data: ${wantedData.values}');
+      ownedData = ownedResponse.values ?? [];
+      wantedData = wantedResponse.values ?? [];
+
+      print('Owned data: $ownedData');
+      print('Wanted data: $wantedData');
 
       setState(() {
         artists =
             {
-              ...(ownedData.values
-                      ?.map((row) {
-                        return row.length > artistIndex
-                            ? row[artistIndex] as String
-                            : '';
-                      })
-                      .where((s) => s.isNotEmpty) ??
-                  []),
-              ...(wantedData.values
-                      ?.map((row) {
-                        return row.length > artistIndex
-                            ? row[artistIndex] as String
-                            : '';
-                      })
-                      .where((s) => s.isNotEmpty) ??
-                  []),
-            }.toList();
-        albums =
-            {
-              ...(ownedData.values
-                      ?.map((row) {
-                        return row.length > albumIndex
-                            ? row[albumIndex] as String
-                            : '';
-                      })
-                      .where((s) => s.isNotEmpty) ??
-                  []),
-              ...(wantedData.values
-                      ?.map((row) {
-                        return row.length > albumIndex
-                            ? row[albumIndex] as String
-                            : '';
-                      })
-                      .where((s) => s.isNotEmpty) ??
-                  []),
-            }.toList();
+              ...(ownedData.map(
+                (row) =>
+                    row.length > ownedArtistIndex
+                        ? (row[ownedArtistIndex] as String).toLowerCase()
+                        : '',
+              )),
+              ...(wantedData.map(
+                (row) =>
+                    row.length > wantedArtistIndex
+                        ? (row[wantedArtistIndex] as String).toLowerCase()
+                        : '',
+              )),
+            }.where((s) => s.isNotEmpty).toList();
         print('Fetched artists: $artists');
-        print('Fetched albums: $albums');
+        _updateAlbums();
       });
     } catch (e) {
       print('Error fetching data: $e');
     }
   }
 
+  void _updateAlbums() {
+    setState(() {
+      if (selectedArtist == null) {
+        ownedAlbums = [];
+        wantedAlbums = [];
+      } else {
+        final lowercaseArtist = selectedArtist!.toLowerCase();
+        ownedAlbums =
+            ownedData
+                .where(
+                  (row) =>
+                      row.length > ownedArtistIndex &&
+                      (row[ownedArtistIndex] as String).toLowerCase() ==
+                          lowercaseArtist,
+                )
+                .map(
+                  (row) =>
+                      row.length > ownedAlbumIndex
+                          ? row[ownedAlbumIndex] as String
+                          : '',
+                )
+                .where((s) => s.isNotEmpty)
+                .toList();
+        wantedAlbums =
+            wantedData
+                .where(
+                  (row) =>
+                      row.length > wantedCheckIndex &&
+                      row.length > wantedArtistIndex &&
+                      (row[wantedArtistIndex] as String).toLowerCase() ==
+                          lowercaseArtist &&
+                      (row[wantedCheckIndex] as String).toLowerCase() == 'no',
+                )
+                .map(
+                  (row) =>
+                      row.length > wantedAlbumIndex
+                          ? row[wantedAlbumIndex] as String
+                          : '',
+                )
+                .where((s) => s.isNotEmpty)
+                .toList();
+        print('Selected artist (normalized): $lowercaseArtist');
+        print('Filtered owned albums: $ownedAlbums');
+        print('Filtered wanted albums: $wantedAlbums');
+      }
+    });
+  }
+
   Future<void> _checkOwnership() async {
-    if (selectedArtist == null || selectedAlbum == null) {
-      setState(() => ownershipStatus = 'Please select both fields.');
+    if (selectedArtist == null ||
+        (selectedOwnedAlbum == null && selectedWantedAlbum == null)) {
+      setState(() => ownershipStatus = 'Please select an artist and an album.');
       return;
     }
 
     try {
-      // Fetch data using same range as _fetchData
       final ownedResponse = await sheetsApi.spreadsheets.values.get(
         spreadsheetId,
         'Owned!A2:Z',
@@ -178,28 +221,43 @@ class VinylHomePageState extends State<VinylHomePage> {
       final ownedData = ownedResponse.values;
       final wantedData = wantedResponse.values;
 
-      print('Checking ownership for: $selectedArtist - $selectedAlbum');
+      final selectedAlbum = selectedOwnedAlbum ?? selectedWantedAlbum;
+      final lowercaseArtist = selectedArtist!.toLowerCase();
+      print('Checking ownership for: $lowercaseArtist - $selectedAlbum');
       print('Owned data for check: $ownedData');
       print('Wanted data for check: $wantedData');
 
       final ownedMatch =
           ownedData?.any((row) {
-            return row.length > albumIndex &&
-                row[artistIndex] == selectedArtist &&
-                row[albumIndex] == selectedAlbum;
+            return row.length > ownedAlbumIndex &&
+                (row[ownedArtistIndex] as String).toLowerCase() ==
+                    lowercaseArtist &&
+                row[ownedAlbumIndex] == selectedAlbum;
           }) ??
           false;
 
       final wantedMatch =
           wantedData?.any((row) {
-            return row.length > albumIndex &&
-                row[artistIndex] == selectedArtist &&
-                row[albumIndex] == selectedAlbum;
+            return row.length > wantedCheckIndex &&
+                (row[wantedArtistIndex] as String).toLowerCase() ==
+                    lowercaseArtist &&
+                row[wantedAlbumIndex] == selectedAlbum &&
+                (row[wantedCheckIndex] as String).toLowerCase() == 'no';
+          }) ??
+          false;
+
+      final ownedViaWanted =
+          wantedData?.any((row) {
+            return row.length > wantedCheckIndex &&
+                (row[wantedArtistIndex] as String).toLowerCase() ==
+                    lowercaseArtist &&
+                row[wantedAlbumIndex] == selectedAlbum &&
+                (row[wantedCheckIndex] as String).toLowerCase() == 'yes';
           }) ??
           false;
 
       setState(() {
-        if (ownedMatch) {
+        if (ownedMatch || ownedViaWanted) {
           ownershipStatus = 'You own this album!';
         } else if (wantedMatch) {
           ownershipStatus = 'You want this album!';
@@ -214,11 +272,7 @@ class VinylHomePageState extends State<VinylHomePage> {
     }
   }
 
-  bool _filterArtists(String item, String filter) {
-    return item.toLowerCase().contains(filter.toLowerCase());
-  }
-
-  bool _filterAlbums(String item, String filter) {
+  bool _filterItems(String item, String filter) {
     return item.toLowerCase().contains(filter.toLowerCase());
   }
 
@@ -233,23 +287,41 @@ class VinylHomePageState extends State<VinylHomePage> {
             DropdownSearch<String>(
               popupProps: const PopupProps.menu(showSearchBox: true),
               items: artists,
-              filterFn: _filterArtists,
+              filterFn: _filterItems,
               dropdownBuilder:
                   (context, selectedItem) =>
                       Text(selectedItem ?? 'Select Artist'),
-              onChanged: (value) => setState(() => selectedArtist = value),
+              onChanged: (value) {
+                setState(() {
+                  selectedArtist = value;
+                  selectedOwnedAlbum = null;
+                  selectedWantedAlbum = null;
+                  _updateAlbums();
+                });
+              },
               selectedItem: selectedArtist,
             ),
             const SizedBox(height: 16),
             DropdownSearch<String>(
               popupProps: const PopupProps.menu(showSearchBox: true),
-              items: albums,
-              filterFn: _filterAlbums,
+              items: ownedAlbums,
+              filterFn: _filterItems,
               dropdownBuilder:
                   (context, selectedItem) =>
-                      Text(selectedItem ?? 'Select Album'),
-              onChanged: (value) => setState(() => selectedAlbum = value),
-              selectedItem: selectedAlbum,
+                      Text(selectedItem ?? 'Select Owned Album'),
+              onChanged: (value) => setState(() => selectedOwnedAlbum = value),
+              selectedItem: selectedOwnedAlbum,
+            ),
+            const SizedBox(height: 16),
+            DropdownSearch<String>(
+              popupProps: const PopupProps.menu(showSearchBox: true),
+              items: wantedAlbums,
+              filterFn: _filterItems,
+              dropdownBuilder:
+                  (context, selectedItem) =>
+                      Text(selectedItem ?? 'Select Wanted Album'),
+              onChanged: (value) => setState(() => selectedWantedAlbum = value),
+              selectedItem: selectedWantedAlbum,
             ),
             const SizedBox(height: 16),
             ElevatedButton(
