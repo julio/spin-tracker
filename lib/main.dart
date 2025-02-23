@@ -35,15 +35,12 @@ class VinylHomePageState extends State<VinylHomePage> {
   List<String> ownedAlbums = [];
   List<String> wantedAlbums = [];
   String? selectedArtist;
-  String? selectedOwnedAlbum;
-  String? selectedWantedAlbum;
-  String ownershipStatus = '';
   late SheetsApi sheetsApi;
   int ownedArtistIndex = -1;
   int ownedAlbumIndex = -1;
   int wantedArtistIndex = -1;
   int wantedAlbumIndex = -1;
-  int wantedCheckIndex = -1; // New index for "Check" column
+  int wantedCheckIndex = -1;
   List<List<dynamic>> ownedData = [];
   List<List<dynamic>> wantedData = [];
 
@@ -201,81 +198,6 @@ class VinylHomePageState extends State<VinylHomePage> {
     });
   }
 
-  Future<void> _checkOwnership() async {
-    if (selectedArtist == null ||
-        (selectedOwnedAlbum == null && selectedWantedAlbum == null)) {
-      setState(() => ownershipStatus = 'Please select an artist and an album.');
-      return;
-    }
-
-    try {
-      final ownedResponse = await sheetsApi.spreadsheets.values.get(
-        spreadsheetId,
-        'Owned!A2:Z',
-      );
-      final wantedResponse = await sheetsApi.spreadsheets.values.get(
-        spreadsheetId,
-        'Wanted!A2:Z',
-      );
-
-      final ownedData = ownedResponse.values;
-      final wantedData = wantedResponse.values;
-
-      final selectedAlbum = selectedOwnedAlbum ?? selectedWantedAlbum;
-      final lowercaseArtist = selectedArtist!.toLowerCase();
-      print('Checking ownership for: $lowercaseArtist - $selectedAlbum');
-      print('Owned data for check: $ownedData');
-      print('Wanted data for check: $wantedData');
-
-      final ownedMatch =
-          ownedData?.any((row) {
-            return row.length > ownedAlbumIndex &&
-                (row[ownedArtistIndex] as String).toLowerCase() ==
-                    lowercaseArtist &&
-                row[ownedAlbumIndex] == selectedAlbum;
-          }) ??
-          false;
-
-      final wantedMatch =
-          wantedData?.any((row) {
-            return row.length > wantedCheckIndex &&
-                (row[wantedArtistIndex] as String).toLowerCase() ==
-                    lowercaseArtist &&
-                row[wantedAlbumIndex] == selectedAlbum &&
-                (row[wantedCheckIndex] as String).toLowerCase() == 'no';
-          }) ??
-          false;
-
-      final ownedViaWanted =
-          wantedData?.any((row) {
-            return row.length > wantedCheckIndex &&
-                (row[wantedArtistIndex] as String).toLowerCase() ==
-                    lowercaseArtist &&
-                row[wantedAlbumIndex] == selectedAlbum &&
-                (row[wantedCheckIndex] as String).toLowerCase() == 'yes';
-          }) ??
-          false;
-
-      setState(() {
-        if (ownedMatch || ownedViaWanted) {
-          ownershipStatus = 'You own this album!';
-        } else if (wantedMatch) {
-          ownershipStatus = 'You want this album!';
-        } else {
-          ownershipStatus = 'Not in your collection or wishlist.';
-        }
-        print('Ownership status: $ownershipStatus');
-      });
-    } catch (e) {
-      print('Error checking ownership: $e');
-      setState(() => ownershipStatus = 'Error checking ownership');
-    }
-  }
-
-  bool _filterItems(String item, String filter) {
-    return item.toLowerCase().contains(filter.toLowerCase());
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -283,53 +205,67 @@ class VinylHomePageState extends State<VinylHomePage> {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             DropdownSearch<String>(
               popupProps: const PopupProps.menu(showSearchBox: true),
               items: artists,
-              filterFn: _filterItems,
+              filterFn:
+                  (item, filter) =>
+                      item.toLowerCase().contains(filter.toLowerCase()),
               dropdownBuilder:
                   (context, selectedItem) =>
                       Text(selectedItem ?? 'Select Artist'),
               onChanged: (value) {
                 setState(() {
                   selectedArtist = value;
-                  selectedOwnedAlbum = null;
-                  selectedWantedAlbum = null;
                   _updateAlbums();
                 });
               },
               selectedItem: selectedArtist,
             ),
             const SizedBox(height: 16),
-            DropdownSearch<String>(
-              popupProps: const PopupProps.menu(showSearchBox: true),
-              items: ownedAlbums,
-              filterFn: _filterItems,
-              dropdownBuilder:
-                  (context, selectedItem) =>
-                      Text(selectedItem ?? 'Select Owned Album'),
-              onChanged: (value) => setState(() => selectedOwnedAlbum = value),
-              selectedItem: selectedOwnedAlbum,
+            const Text(
+              'Owned Albums:',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
+            const SizedBox(height: 8),
+            if (ownedAlbums.isEmpty)
+              const Text('No owned albums for this artist.')
+            else
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children:
+                    ownedAlbums
+                        .map(
+                          (album) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4.0),
+                            child: Text(album),
+                          ),
+                        )
+                        .toList(),
+              ),
             const SizedBox(height: 16),
-            DropdownSearch<String>(
-              popupProps: const PopupProps.menu(showSearchBox: true),
-              items: wantedAlbums,
-              filterFn: _filterItems,
-              dropdownBuilder:
-                  (context, selectedItem) =>
-                      Text(selectedItem ?? 'Select Wanted Album'),
-              onChanged: (value) => setState(() => selectedWantedAlbum = value),
-              selectedItem: selectedWantedAlbum,
+            const Text(
+              'Wanted Albums:',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _checkOwnership,
-              child: const Text('Check Ownership'),
-            ),
-            const SizedBox(height: 16),
-            Text(ownershipStatus, style: const TextStyle(fontSize: 18)),
+            const SizedBox(height: 8),
+            if (wantedAlbums.isEmpty)
+              const Text('No wanted albums for this artist.')
+            else
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children:
+                    wantedAlbums
+                        .map(
+                          (album) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4.0),
+                            child: Text(album),
+                          ),
+                        )
+                        .toList(),
+              ),
           ],
         ),
       ),
