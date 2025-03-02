@@ -1,0 +1,8 @@
+# Podfile for Flutter iOS project
+platform :ios, '12.0'  # Adjust the iOS version as needed
+
+target 'Runner' do
+  use_frameworks!
+  # Add your dependencies here
+end
+
