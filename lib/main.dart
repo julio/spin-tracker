@@ -38,12 +38,13 @@ class VinylHomePageState extends State<VinylHomePage> {
   late SheetsApi sheetsApi;
   int ownedArtistIndex = -1;
   int ownedAlbumIndex = -1;
+  int ownedReleaseIndex = -1; // Updated to "Release"
   int wantedArtistIndex = -1;
   int wantedAlbumIndex = -1;
   int wantedCheckIndex = -1;
   List<List<dynamic>> ownedData = [];
   List<List<dynamic>> wantedData = [];
-  bool isLoading = true; // New loading state
+  bool isLoading = true;
 
   @override
   void initState() {
@@ -53,13 +54,18 @@ class VinylHomePageState extends State<VinylHomePage> {
 
   Future<void> _loadData() async {
     setState(() {
-      isLoading = true; // Start loading
+      isLoading = true;
     });
-    await _initializeSheetsApi();
-    await _fetchData();
-    setState(() {
-      isLoading = false; // Done loading
-    });
+    try {
+      await _initializeSheetsApi();
+      await _fetchData();
+    } catch (e) {
+      print('Error loading data: $e');
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
   Future<void> _initializeSheetsApi() async {
@@ -94,13 +100,14 @@ class VinylHomePageState extends State<VinylHomePage> {
 
       ownedArtistIndex = ownedHeaderList.indexOf('Artist');
       ownedAlbumIndex = ownedHeaderList.indexOf('Album');
+      ownedReleaseIndex = ownedHeaderList.indexOf('Release'); // Updated to "Release"
       wantedArtistIndex = wantedHeaderList.indexOf('Artist');
       wantedAlbumIndex = wantedHeaderList.indexOf('Album');
       wantedCheckIndex = wantedHeaderList.indexOf('Check');
 
-      if (ownedArtistIndex == -1 || ownedAlbumIndex == -1) {
+      if (ownedArtistIndex == -1 || ownedAlbumIndex == -1 || ownedReleaseIndex == -1) {
         print(
-          'Error: "Artist" or "Album" not found in Owned headers: $ownedHeaderList',
+          'Error: "Artist", "Album", or "Release" not found in Owned headers: $ownedHeaderList',
         );
         return;
       }
@@ -113,7 +120,7 @@ class VinylHomePageState extends State<VinylHomePage> {
         return;
       }
 
-      print('Owned indices: artist=$ownedArtistIndex, album=$ownedAlbumIndex');
+      print('Owned indices: artist=$ownedArtistIndex, album=$ownedAlbumIndex, release=$ownedReleaseIndex');
       print(
         'Wanted indices: artist=$wantedArtistIndex, album=$wantedAlbumIndex, check=$wantedCheckIndex',
       );
@@ -165,22 +172,26 @@ class VinylHomePageState extends State<VinylHomePage> {
       } else {
         final lowercaseArtist = selectedArtist!.toLowerCase();
         ownedAlbums =
-            ownedData
-                .where(
-                  (row) =>
-              row.length > ownedArtistIndex &&
-                  (row[ownedArtistIndex] as String).toLowerCase() ==
-                      lowercaseArtist,
-            )
-                .map(
-                  (row) => {
-                'album': row.length > ownedAlbumIndex
-                    ? row[ownedAlbumIndex] as String
-                    : '',
-              },
-            )
-                .where((entry) => entry['album']!.isNotEmpty)
-                .toList();
+        ownedData
+            .where(
+              (row) =>
+          row.length > ownedArtistIndex &&
+              (row[ownedArtistIndex] as String).toLowerCase() ==
+                  lowercaseArtist,
+        )
+            .map(
+              (row) => {
+            'album': row.length > ownedAlbumIndex
+                ? row[ownedAlbumIndex] as String
+                : '',
+            'release': row.length > ownedReleaseIndex
+                ? row[ownedReleaseIndex] as String
+                : '',
+          },
+        )
+            .where((entry) => entry['album']!.isNotEmpty)
+            .toList()
+          ..sort((a, b) => a['release']!.compareTo(b['release']!)); // Sort by "Release"
 
         wantedAlbums =
             wantedData
@@ -205,7 +216,7 @@ class VinylHomePageState extends State<VinylHomePage> {
                 .toList();
 
         print('Selected artist (normalized): $lowercaseArtist');
-        print('Filtered owned albums: $ownedAlbums');
+        print('Filtered owned albums (sorted): $ownedAlbums');
         print('Filtered wanted albums: $wantedAlbums');
       }
     });
@@ -251,7 +262,7 @@ class VinylHomePageState extends State<VinylHomePage> {
                 });
               },
               selectedItem: selectedArtist,
-              enabled: !isLoading, // Disable dropdown while loading
+              enabled: !isLoading,
             ),
             const SizedBox(height: 16),
             Row(
@@ -278,7 +289,9 @@ class VinylHomePageState extends State<VinylHomePage> {
                     .map(
                       (entry) => Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4.0),
-                    child: Text(entry['album']!),
+                    child: Text(
+                      '${entry['album']} (${entry['release'] ?? 'N/A'})', // Updated to "Release"
+                    ),
                   ),
                 )
                     .toList(),
