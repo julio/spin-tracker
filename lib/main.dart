@@ -33,7 +33,7 @@ class VinylHomePage extends StatefulWidget {
 class VinylHomePageState extends State<VinylHomePage> {
   List<String> artists = [];
   List<Map<String, String>> ownedAlbums = [];
-  List<Map<String, String>> wantedAlbums = []; // Now stores album, column A, and column C
+  List<Map<String, String>> wantedAlbums = [];
   String? selectedArtist;
   late SheetsApi sheetsApi;
   int ownedArtistIndex = -1;
@@ -43,6 +43,7 @@ class VinylHomePageState extends State<VinylHomePage> {
   int wantedCheckIndex = -1;
   List<List<dynamic>> ownedData = [];
   List<List<dynamic>> wantedData = [];
+  bool isLoading = true; // New loading state
 
   @override
   void initState() {
@@ -51,8 +52,14 @@ class VinylHomePageState extends State<VinylHomePage> {
   }
 
   Future<void> _loadData() async {
+    setState(() {
+      isLoading = true; // Start loading
+    });
     await _initializeSheetsApi();
     await _fetchData();
+    setState(() {
+      isLoading = false; // Done loading
+    });
   }
 
   Future<void> _initializeSheetsApi() async {
@@ -244,6 +251,7 @@ class VinylHomePageState extends State<VinylHomePage> {
                 });
               },
               selectedItem: selectedArtist,
+              enabled: !isLoading, // Disable dropdown while loading
             ),
             const SizedBox(height: 16),
             Row(
