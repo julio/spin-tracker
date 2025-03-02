@@ -38,7 +38,7 @@ class VinylHomePageState extends State<VinylHomePage> {
   late SheetsApi sheetsApi;
   int ownedArtistIndex = -1;
   int ownedAlbumIndex = -1;
-  int ownedReleaseIndex = -1; // Updated to "Release"
+  int ownedReleaseIndex = -1;
   int wantedArtistIndex = -1;
   int wantedAlbumIndex = -1;
   int wantedCheckIndex = -1;
@@ -100,7 +100,7 @@ class VinylHomePageState extends State<VinylHomePage> {
 
       ownedArtistIndex = ownedHeaderList.indexOf('Artist');
       ownedAlbumIndex = ownedHeaderList.indexOf('Album');
-      ownedReleaseIndex = ownedHeaderList.indexOf('Release'); // Updated to "Release"
+      ownedReleaseIndex = ownedHeaderList.indexOf('Release');
       wantedArtistIndex = wantedHeaderList.indexOf('Artist');
       wantedAlbumIndex = wantedHeaderList.indexOf('Album');
       wantedCheckIndex = wantedHeaderList.indexOf('Check');
@@ -191,7 +191,7 @@ class VinylHomePageState extends State<VinylHomePage> {
         )
             .where((entry) => entry['album']!.isNotEmpty)
             .toList()
-          ..sort((a, b) => a['release']!.compareTo(b['release']!)); // Sort by "Release"
+          ..sort((a, b) => a['release']!.compareTo(b['release']!));
 
         wantedAlbums =
             wantedData
@@ -241,103 +241,105 @@ class VinylHomePageState extends State<VinylHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Vinyl Checker')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            DropdownSearch<String>(
-              popupProps: const PopupProps.menu(showSearchBox: true),
-              items: artists,
-              filterFn:
-                  (item, filter) =>
-                  item.toLowerCase().contains(filter.toLowerCase()),
-              dropdownBuilder:
-                  (context, selectedItem) =>
-                  Text(selectedItem ?? 'Select Artist'),
-              onChanged: (value) {
-                setState(() {
-                  selectedArtist = value;
-                  _updateAlbums();
-                });
-              },
-              selectedItem: selectedArtist,
-              enabled: !isLoading,
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Owned Albums:',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  'Total: ${ownedData.length}',
-                  style: const TextStyle(fontSize: 16, color: Colors.grey),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            if (ownedAlbums.isEmpty)
-              const Text('No owned albums for this artist.')
-            else
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children:
-                ownedAlbums
-                    .map(
-                      (entry) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4.0),
-                    child: Text(
-                      '${entry['album']} (${entry['release'] ?? 'N/A'})', // Updated to "Release"
-                    ),
-                  ),
-                )
-                    .toList(),
+      body: SingleChildScrollView( // Added scrollable wrapper
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              DropdownSearch<String>(
+                popupProps: const PopupProps.menu(showSearchBox: true),
+                items: artists,
+                filterFn:
+                    (item, filter) =>
+                    item.toLowerCase().contains(filter.toLowerCase()),
+                dropdownBuilder:
+                    (context, selectedItem) =>
+                    Text(selectedItem ?? 'Select Artist'),
+                onChanged: (value) {
+                  setState(() {
+                    selectedArtist = value;
+                    _updateAlbums();
+                  });
+                },
+                selectedItem: selectedArtist,
+                enabled: !isLoading,
               ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Wanted Albums:',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  'Total Unique: ${_getUniqueWantedAlbumsCount()}',
-                  style: const TextStyle(fontSize: 16, color: Colors.grey),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            if (wantedAlbums.isEmpty)
-              const Text('No wanted albums for this artist.')
-            else
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children:
-                wantedAlbums
-                    .map(
-                      (entry) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4.0),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(entry['album']!),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'List: ${entry['columnA'] ?? 'N/A'}, Rank: ${entry['columnC'] ?? 'N/A'}',
-                          style: const TextStyle(color: Colors.grey),
-                        ),
-                      ],
-                    ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Owned Albums:',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
-                )
-                    .toList(),
+                  Text(
+                    'Total: ${ownedData.length}',
+                    style: const TextStyle(fontSize: 16, color: Colors.grey),
+                  ),
+                ],
               ),
-          ],
+              const SizedBox(height: 8),
+              if (ownedAlbums.isEmpty)
+                const Text('No owned albums for this artist.')
+              else
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children:
+                  ownedAlbums
+                      .map(
+                        (entry) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4.0),
+                      child: Text(
+                        '${entry['album']} (${entry['release'] ?? 'N/A'})',
+                      ),
+                    ),
+                  )
+                      .toList(),
+                ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Wanted Albums:',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    'Total Unique: ${_getUniqueWantedAlbumsCount()}',
+                    style: const TextStyle(fontSize: 16, color: Colors.grey),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              if (wantedAlbums.isEmpty)
+                const Text('No wanted albums for this artist.')
+              else
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children:
+                  wantedAlbums
+                      .map(
+                        (entry) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4.0),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(entry['album']!),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'List: ${entry['columnA'] ?? 'N/A'}, Rank: ${entry['columnC'] ?? 'N/A'}',
+                            style: const TextStyle(color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                      .toList(),
+                ),
+            ],
+          ),
         ),
       ),
     );
