@@ -32,8 +32,8 @@ class VinylHomePage extends StatefulWidget {
 
 class VinylHomePageState extends State<VinylHomePage> {
   List<String> artists = [];
-  List<String> ownedAlbums = [];
-  List<String> wantedAlbums = [];
+  List<Map<String, String>> ownedAlbums = [];
+  List<Map<String, String>> wantedAlbums = []; // Now stores album, column A, and column C
   String? selectedArtist;
   late SheetsApi sheetsApi;
   int ownedArtistIndex = -1;
@@ -130,16 +130,16 @@ class VinylHomePageState extends State<VinylHomePage> {
         artists =
             {
               ...(ownedData.map(
-                (row) =>
-                    row.length > ownedArtistIndex
-                        ? (row[ownedArtistIndex] as String).toLowerCase()
-                        : '',
+                    (row) =>
+                row.length > ownedArtistIndex
+                    ? (row[ownedArtistIndex] as String).toLowerCase()
+                    : '',
               )),
               ...(wantedData.map(
-                (row) =>
-                    row.length > wantedArtistIndex
-                        ? (row[wantedArtistIndex] as String).toLowerCase()
-                        : '',
+                    (row) =>
+                row.length > wantedArtistIndex
+                    ? (row[wantedArtistIndex] as String).toLowerCase()
+                    : '',
               )),
             }.where((s) => s.isNotEmpty).toList();
         print('Fetched artists: $artists');
@@ -161,41 +161,62 @@ class VinylHomePageState extends State<VinylHomePage> {
             ownedData
                 .where(
                   (row) =>
-                      row.length > ownedArtistIndex &&
-                      (row[ownedArtistIndex] as String).toLowerCase() ==
-                          lowercaseArtist,
-                )
+              row.length > ownedArtistIndex &&
+                  (row[ownedArtistIndex] as String).toLowerCase() ==
+                      lowercaseArtist,
+            )
                 .map(
-                  (row) =>
-                      row.length > ownedAlbumIndex
-                          ? row[ownedAlbumIndex] as String
-                          : '',
-                )
-                .where((s) => s.isNotEmpty)
+                  (row) => {
+                'album': row.length > ownedAlbumIndex
+                    ? row[ownedAlbumIndex] as String
+                    : '',
+              },
+            )
+                .where((entry) => entry['album']!.isNotEmpty)
                 .toList();
+
         wantedAlbums =
             wantedData
                 .where(
                   (row) =>
-                      row.length > wantedCheckIndex &&
-                      row.length > wantedArtistIndex &&
-                      (row[wantedArtistIndex] as String).toLowerCase() ==
-                          lowercaseArtist &&
-                      (row[wantedCheckIndex] as String).toLowerCase() == 'no',
-                )
+              row.length > wantedCheckIndex &&
+                  row.length > wantedArtistIndex &&
+                  (row[wantedArtistIndex] as String).toLowerCase() ==
+                      lowercaseArtist &&
+                  (row[wantedCheckIndex] as String).toLowerCase() == 'no',
+            )
                 .map(
-                  (row) =>
-                      row.length > wantedAlbumIndex
-                          ? row[wantedAlbumIndex] as String
-                          : '',
-                )
-                .where((s) => s.isNotEmpty)
+                  (row) => {
+                'album': row.length > wantedAlbumIndex
+                    ? row[wantedAlbumIndex] as String
+                    : '',
+                'columnA': row.length > 0 ? row[0] as String : '',
+                'columnC': row.length > 2 ? row[2] as String : '',
+              },
+            )
+                .where((entry) => entry['album']!.isNotEmpty)
                 .toList();
+
         print('Selected artist (normalized): $lowercaseArtist');
         print('Filtered owned albums: $ownedAlbums');
         print('Filtered wanted albums: $wantedAlbums');
       }
     });
+  }
+
+  int _getUniqueWantedAlbumsCount() {
+    final uniqueAlbums = <String>{};
+    for (var row in wantedData) {
+      if (row.length > wantedArtistIndex &&
+          row.length > wantedAlbumIndex &&
+          row.length > wantedCheckIndex &&
+          (row[wantedCheckIndex] as String).toLowerCase() == 'no') {
+        final artist = (row[wantedArtistIndex] as String).toLowerCase();
+        final album = (row[wantedAlbumIndex] as String).toLowerCase();
+        uniqueAlbums.add('$artist|$album');
+      }
+    }
+    return uniqueAlbums.length;
   }
 
   @override
@@ -212,10 +233,10 @@ class VinylHomePageState extends State<VinylHomePage> {
               items: artists,
               filterFn:
                   (item, filter) =>
-                      item.toLowerCase().contains(filter.toLowerCase()),
+                  item.toLowerCase().contains(filter.toLowerCase()),
               dropdownBuilder:
                   (context, selectedItem) =>
-                      Text(selectedItem ?? 'Select Artist'),
+                  Text(selectedItem ?? 'Select Artist'),
               onChanged: (value) {
                 setState(() {
                   selectedArtist = value;
@@ -225,9 +246,18 @@ class VinylHomePageState extends State<VinylHomePage> {
               selectedItem: selectedArtist,
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Owned Albums:',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Owned Albums:',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  'Total: ${ownedData.length}',
+                  style: const TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             if (ownedAlbums.isEmpty)
@@ -236,19 +266,28 @@ class VinylHomePageState extends State<VinylHomePage> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children:
-                    ownedAlbums
-                        .map(
-                          (album) => Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4.0),
-                            child: Text(album),
-                          ),
-                        )
-                        .toList(),
+                ownedAlbums
+                    .map(
+                      (entry) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4.0),
+                    child: Text(entry['album']!),
+                  ),
+                )
+                    .toList(),
               ),
             const SizedBox(height: 16),
-            const Text(
-              'Wanted Albums:',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Wanted Albums:',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  'Total Unique: ${_getUniqueWantedAlbumsCount()}',
+                  style: const TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             if (wantedAlbums.isEmpty)
@@ -257,14 +296,25 @@ class VinylHomePageState extends State<VinylHomePage> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children:
-                    wantedAlbums
-                        .map(
-                          (album) => Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4.0),
-                            child: Text(album),
-                          ),
-                        )
-                        .toList(),
+                wantedAlbums
+                    .map(
+                      (entry) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4.0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(entry['album']!),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'List: ${entry['columnA'] ?? 'N/A'}, Rank: ${entry['columnC'] ?? 'N/A'}',
+                          style: const TextStyle(color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+                    .toList(),
               ),
           ],
         ),
