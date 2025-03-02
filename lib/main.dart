@@ -52,7 +52,6 @@ class VinylHomePageState extends State<VinylHomePage> {
     _loadData();
   }
 
-  // Load data with loading state management
   Future<void> _loadData() async {
     setState(() => isLoading = true);
     try {
@@ -65,7 +64,6 @@ class VinylHomePageState extends State<VinylHomePage> {
     }
   }
 
-  // Initialize Sheets API client
   Future<void> _initializeSheetsApi() async {
     try {
       final credentials = await DefaultAssetBundle.of(context)
@@ -81,7 +79,6 @@ class VinylHomePageState extends State<VinylHomePage> {
     }
   }
 
-  // Fetch all data from sheets
   Future<void> _fetchData() async {
     try {
       await _fetchHeaders();
@@ -92,7 +89,6 @@ class VinylHomePageState extends State<VinylHomePage> {
     }
   }
 
-  // Fetch headers and set indices
   Future<void> _fetchHeaders() async {
     final ownedHeaders = await sheetsApi.spreadsheets.values.get(spreadsheetId, 'Owned!A1:Z1');
     final wantedHeaders = await sheetsApi.spreadsheets.values.get(spreadsheetId, 'Wanted!A1:Z1');
@@ -106,21 +102,18 @@ class VinylHomePageState extends State<VinylHomePage> {
     _validateIndices(ownedHeaderList, wantedHeaderList);
   }
 
-  // Set indices for Owned sheet
   void _setOwnedIndices(List<dynamic> headers) {
     ownedArtistIndex = headers.indexOf('Artist');
     ownedAlbumIndex = headers.indexOf('Album');
     ownedReleaseIndex = headers.indexOf('Release');
   }
 
-  // Set indices for Wanted sheet
   void _setWantedIndices(List<dynamic> headers) {
     wantedArtistIndex = headers.indexOf('Artist');
     wantedAlbumIndex = headers.indexOf('Album');
     wantedCheckIndex = headers.indexOf('Check');
   }
 
-  // Validate all required indices
   void _validateIndices(List<dynamic> ownedHeaders, List<dynamic> wantedHeaders) {
     if (ownedArtistIndex == -1 || ownedAlbumIndex == -1 || ownedReleaseIndex == -1) {
       print('Error: "Artist", "Album", or "Release" not found in Owned headers: $ownedHeaders');
@@ -134,7 +127,6 @@ class VinylHomePageState extends State<VinylHomePage> {
     print('Wanted indices: artist=$wantedArtistIndex, album=$wantedAlbumIndex, check=$wantedCheckIndex');
   }
 
-  // Fetch raw data from sheets
   Future<void> _fetchSheetData() async {
     final ownedResponse = await sheetsApi.spreadsheets.values.get(spreadsheetId, 'Owned!A2:Z');
     final wantedResponse = await sheetsApi.spreadsheets.values.get(spreadsheetId, 'Wanted!A2:Z');
@@ -146,7 +138,6 @@ class VinylHomePageState extends State<VinylHomePage> {
     print('Wanted data: $wantedData');
   }
 
-  // Update artists list from fetched data
   void _updateArtists() {
     setState(() {
       artists = {
@@ -158,12 +149,10 @@ class VinylHomePageState extends State<VinylHomePage> {
     });
   }
 
-  // Helper to safely get string from row
   String _getString(List<dynamic> row, int index) {
     return row.length > index ? (row[index] as String).toLowerCase() : '';
   }
 
-  // Update albums for selected artist
   void _updateAlbums() {
     setState(() {
       if (selectedArtist == null) {
@@ -180,7 +169,6 @@ class VinylHomePageState extends State<VinylHomePage> {
     });
   }
 
-  // Filter and sort owned albums
   List<Map<String, String>> _filterAndSortOwnedAlbums(String artist) {
     return ownedData
         .where((row) => row.length > ownedArtistIndex && _getString(row, ownedArtistIndex) == artist)
@@ -193,7 +181,6 @@ class VinylHomePageState extends State<VinylHomePage> {
       ..sort((a, b) => a['release']!.compareTo(b['release']!));
   }
 
-  // Filter wanted albums
   List<Map<String, String>> _filterWantedAlbums(String artist) {
     return wantedData
         .where((row) =>
@@ -210,7 +197,6 @@ class VinylHomePageState extends State<VinylHomePage> {
         .toList();
   }
 
-  // Calculate unique wanted albums count
   int _getUniqueWantedAlbumsCount() {
     final uniqueAlbums = <String>{};
     for (var row in wantedData) {
@@ -226,7 +212,40 @@ class VinylHomePageState extends State<VinylHomePage> {
     return uniqueAlbums.length;
   }
 
-  // Build the main UI
+  // Navigate to previous artist
+  void _goToPreviousArtist() {
+    if (selectedArtist == null || artists.isEmpty) return;
+    final currentIndex = artists.indexOf(selectedArtist!);
+    if (currentIndex > 0) {
+      setState(() {
+        selectedArtist = artists[currentIndex - 1];
+        _updateAlbums();
+      });
+    }
+  }
+
+  // Navigate to next artist
+  void _goToNextArtist() {
+    if (selectedArtist == null || artists.isEmpty) return;
+    final currentIndex = artists.indexOf(selectedArtist!);
+    if (currentIndex < artists.length - 1) {
+      setState(() {
+        selectedArtist = artists[currentIndex + 1];
+        _updateAlbums();
+      });
+    }
+  }
+
+  // Check if back button should be disabled
+  bool _isBackButtonDisabled() {
+    return isLoading || artists.isEmpty || selectedArtist == null || artists.indexOf(selectedArtist!) == 0;
+  }
+
+  // Check if next button should be disabled
+  bool _isNextButtonDisabled() {
+    return isLoading || artists.isEmpty || selectedArtist == null || artists.indexOf(selectedArtist!) == artists.length - 1;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -235,7 +254,6 @@ class VinylHomePageState extends State<VinylHomePage> {
     );
   }
 
-  // Build scrollable content
   Widget _buildScrollableContent() {
     return SingleChildScrollView(
       child: Padding(
@@ -243,7 +261,7 @@ class VinylHomePageState extends State<VinylHomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildArtistDropdown(),
+            _buildArtistNavigationRow(),
             const SizedBox(height: 16),
             _buildOwnedAlbumsSection(),
             const SizedBox(height: 16),
@@ -254,7 +272,25 @@ class VinylHomePageState extends State<VinylHomePage> {
     );
   }
 
-  // Build artist dropdown
+  // Build row with back button, dropdown, and next button
+  Widget _buildArtistNavigationRow() {
+    return Row(
+      children: [
+        IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: _isBackButtonDisabled() ? null : _goToPreviousArtist,
+          tooltip: 'Previous Artist',
+        ),
+        Expanded(child: _buildArtistDropdown()),
+        IconButton(
+          icon: const Icon(Icons.arrow_forward),
+          onPressed: _isNextButtonDisabled() ? null : _goToNextArtist,
+          tooltip: 'Next Artist',
+        ),
+      ],
+    );
+  }
+
   Widget _buildArtistDropdown() {
     return DropdownSearch<String>(
       popupProps: const PopupProps.menu(showSearchBox: true),
@@ -270,7 +306,6 @@ class VinylHomePageState extends State<VinylHomePage> {
     );
   }
 
-  // Build owned albums section
   Widget _buildOwnedAlbumsSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -298,7 +333,6 @@ class VinylHomePageState extends State<VinylHomePage> {
     );
   }
 
-  // Build wanted albums section
   Widget _buildWantedAlbumsSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
