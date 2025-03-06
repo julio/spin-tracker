@@ -135,6 +135,7 @@ class VinylHomePageState extends State<VinylHomePage> {
         ownedAlbums = ownedData
             .where((row) => row.length > ownedArtistIndex && (row[ownedArtistIndex] as String).toLowerCase() == lowercaseArtist)
             .map((row) => {
+          'artist': row[ownedArtistIndex] as String, // Add artist for cover fetch
           'album': row.length > ownedAlbumIndex ? row[ownedAlbumIndex] as String : '',
           'release': row.length > ownedReleaseIndex ? row[ownedReleaseIndex] as String : '',
         })
@@ -149,6 +150,7 @@ class VinylHomePageState extends State<VinylHomePage> {
             (row[wantedArtistIndex] as String).toLowerCase() == lowercaseArtist &&
             (row[wantedCheckIndex] as String).toLowerCase() == 'no')
             .map((row) => {
+          'artist': row[wantedArtistIndex] as String, // Add artist for cover fetch
           'album': row.length > wantedAlbumIndex ? row[wantedAlbumIndex] as String : '',
           'columnA': row.length > 0 ? row[0] as String : '',
           'columnC': row.length > 2 ? row[2] as String : '',
@@ -195,6 +197,55 @@ class VinylHomePageState extends State<VinylHomePage> {
       'isToday': (row[ownedReleaseIndex] as String).substring(5) == todayMonthDay ? 'Today' : 'Tomorrow',
     })
         .toList();
+  }
+
+  // Fetch Spotify access token
+  Future<String> _getSpotifyAccessToken() async {
+    final response = await http.post(
+      Uri.parse('https://accounts.spotify.com/api/token'),
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: {
+        'grant_type': 'client_credentials',
+        'client_id': spotifyClientId,
+        'client_secret': spotifyClientSecret,
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['access_token'];
+    } else {
+      throw Exception('Failed to get Spotify token: ${response.statusCode}');
+    }
+  }
+
+  // Fetch cover art URL from Spotify
+  Future<String?> _fetchCoverArt(String artist, String album) async {
+    try {
+      final token = await _getSpotifyAccessToken();
+      final query = Uri.encodeQueryComponent('artist:$artist album:$album');
+      final response = await http.get(
+        Uri.parse('https://api.spotify.com/v1/search?q=$query&type=album'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final items = data['albums']['items'] as List<dynamic>;
+        if (items.isNotEmpty) {
+          final images = items[0]['images'] as List<dynamic>;
+          if (images.isNotEmpty) {
+            return images[0]['url'] as String; // Get 640x640 image
+          }
+        }
+      }
+      return null; // No cover found
+    } catch (e) {
+      print('Error fetching cover art: $e');
+      return null;
+    }
   }
 
   @override
@@ -248,7 +299,24 @@ class VinylHomePageState extends State<VinylHomePage> {
                   children: ownedAlbums
                       .map((entry) => Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4.0),
-                    child: Text('${entry['album']} (${entry['release'] ?? 'N/A'})'),
+                    child: GestureDetector(
+                      onTap: () async {
+                        final coverUrl = await _fetchCoverArt(entry['artist']!, entry['album']!);
+                        if (coverUrl != null && mounted) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => CoverArtView(
+                                artist: entry['artist']!,
+                                album: entry['album']!,
+                                coverUrl: coverUrl,
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                      child: Text('${entry['album']} (${entry['release'] ?? 'N/A'})'),
+                    ),
                   ))
                       .toList(),
                 ),
@@ -270,15 +338,32 @@ class VinylHomePageState extends State<VinylHomePage> {
                   children: wantedAlbums
                       .map((entry) => Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4.0),
-                    child: Row(
-                      children: [
-                        Expanded(child: Text(entry['album']!)),
-                        const SizedBox(width: 8),
-                        Text(
-                          'List: ${entry['columnA'] ?? 'N/A'}, Rank: ${entry['columnC'] ?? 'N/A'}',
-                          style: const TextStyle(color: Colors.grey),
-                        ),
-                      ],
+                    child: GestureDetector(
+                      onTap: () async {
+                        final coverUrl = await _fetchCoverArt(entry['artist']!, entry['album']!);
+                        if (coverUrl != null && mounted) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => CoverArtView(
+                                artist: entry['artist']!,
+                                album: entry['album']!,
+                                coverUrl: coverUrl,
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                      child: Row(
+                        children: [
+                          Expanded(child: Text(entry['album']!)),
+                          const SizedBox(width: 8),
+                          Text(
+                            'List: ${entry['columnA'] ?? 'N/A'}, Rank: ${entry['columnC'] ?? 'N/A'}',
+                            style: const TextStyle(color: Colors.grey),
+                          ),
+                        ],
+                      ),
                     ),
                   ))
                       .toList(),
@@ -312,6 +397,34 @@ class AnniversariesView extends StatelessWidget {
             trailing: Text(entry['isToday']!),
           );
         },
+      ),
+    );
+  }
+}
+
+class CoverArtView extends StatelessWidget {
+  final String artist;
+  final String album;
+  final String coverUrl;
+
+  const CoverArtView({super.key, required this.artist, required this.album, required this.coverUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('$album - $artist'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: Center(
+        child: Image.network(
+          coverUrl,
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) => const Text('Failed to load cover art'),
+        ),
       ),
     );
   }
