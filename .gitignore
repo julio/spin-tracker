@@ -46,15 +46,10 @@ app.*.map.json
 
 # Ignore service account JSON
 assets/vinylcollection-451818-1e41b0728e29.json
+lib/config.dart
 
 # Flutter build outputs
 build/
 *.g.dart
 *.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
 .packages
-.pub-cache/
-.pub/
-
-lib/config.dart
