@@ -229,7 +229,7 @@ class VinylHomePageState extends State<VinylHomePage> {
     return uniqueAlbums.length;
   }
 
-  List<Map<String, String>> _getAnniversariesTodayAndTomorrow() {
+  List<Map<String, String>> getAnniversariesTodayAndTomorrow() {
     final today = DateTime.now();
     final tomorrow = today.add(const Duration(days: 1));
     final todayMonthDay =
@@ -317,25 +317,7 @@ class VinylHomePageState extends State<VinylHomePage> {
         artists.indexOf(selectedArtist!.toLowerCase()) == artists.length - 1;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Vinyl Checker'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.calendar_today),
-            onPressed:
-                () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder:
-                        (_) => AnniversariesView(
-                          anniversaries: _getAnniversariesTodayAndTomorrow(),
-                        ),
-                  ),
-                ),
-            tooltip: 'Anniversaries',
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Vinyl Checker')),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -497,6 +479,35 @@ class VinylHomePageState extends State<VinylHomePage> {
                           )
                           .toList(),
                 ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.cake),
+                    onPressed:
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (_) => AnniversariesView(
+                                  anniversaries:
+                                      getAnniversariesTodayAndTomorrow(),
+                                ),
+                          ),
+                        ),
+                    tooltip: 'Anniversaries',
+                  ),
+                  const SizedBox(width: 16),
+                  IconButton(
+                    icon: const Icon(Icons.search),
+                    onPressed: () {
+                      // Already on search view, so no-op here
+                    },
+                    tooltip: 'Search',
+                  ),
+                ],
+              ),
             ],
           ),
         ),
