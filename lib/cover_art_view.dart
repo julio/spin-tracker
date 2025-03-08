@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'anniversaries_view.dart'; // Added missing import
-import 'vinyl_home_page.dart'; // Added for VinylHomePageState access
+import 'anniversaries_view.dart';
+import 'vinyl_home_page.dart';
 
 class CoverArtView extends StatelessWidget {
   final String artist;
@@ -35,6 +35,12 @@ class CoverArtView extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               IconButton(
+                icon: const Icon(Icons.search),
+                onPressed: () => Navigator.pop(context),
+                tooltip: 'Search',
+              ),
+              const SizedBox(width: 16),
+              IconButton(
                 icon: const Icon(Icons.cake),
                 onPressed:
                     () => Navigator.pushReplacement(
@@ -49,12 +55,6 @@ class CoverArtView extends StatelessWidget {
                       ),
                     ),
                 tooltip: 'Anniversaries',
-              ),
-              const SizedBox(width: 16),
-              IconButton(
-                icon: const Icon(Icons.search),
-                onPressed: () => Navigator.pop(context),
-                tooltip: 'Search',
               ),
             ],
           ),

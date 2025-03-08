@@ -510,6 +510,14 @@ class VinylHomePageState extends State<VinylHomePage> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               IconButton(
+                icon: const Icon(Icons.search),
+                onPressed: () {
+                  // Already on search view, no-op
+                },
+                tooltip: 'Search',
+              ),
+              const SizedBox(width: 16),
+              IconButton(
                 icon: const Icon(Icons.cake),
                 onPressed:
                     () => Navigator.push(
@@ -522,14 +530,6 @@ class VinylHomePageState extends State<VinylHomePage> {
                       ),
                     ),
                 tooltip: 'Anniversaries',
-              ),
-              const SizedBox(width: 16),
-              IconButton(
-                icon: const Icon(Icons.search),
-                onPressed: () {
-                  // Already on search view, no-op
-                },
-                tooltip: 'Search',
               ),
             ],
           ),

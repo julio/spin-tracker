@@ -8,7 +8,10 @@ class AnniversariesView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Anniversaries Today & Tomorrow')),
+      appBar: AppBar(
+        title: const Text('Anniversaries Today & Tomorrow'),
+        automaticallyImplyLeading: false, // Prevents default back button
+      ),
       body: Column(
         children: [
           Expanded(
@@ -35,17 +38,17 @@ class AnniversariesView extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               IconButton(
+                icon: const Icon(Icons.search),
+                onPressed: () => Navigator.pop(context),
+                tooltip: 'Search',
+              ),
+              const SizedBox(width: 16),
+              IconButton(
                 icon: const Icon(Icons.cake),
                 onPressed: () {
                   // Already here, no-op
                 },
                 tooltip: 'Anniversaries',
-              ),
-              const SizedBox(width: 16),
-              IconButton(
-                icon: const Icon(Icons.search),
-                onPressed: () => Navigator.pop(context),
-                tooltip: 'Search',
               ),
             ],
           ),
