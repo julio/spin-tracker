@@ -49,12 +49,13 @@ class SpotifyService {
       // Add a small delay to ensure Spotify has time to initialize
       await Future.delayed(const Duration(seconds: 2));
 
-      // Try to initialize the connection
+      // Try to initialize the connection with all necessary scopes
       _logger.info('Attempting to connect to Spotify...');
       _isConnected = await SpotifySdk.connectToSpotifyRemote(
         clientId: spotifyClientId,
         redirectUrl: spotifyRedirectUri,
-        scope: 'app-remote-control streaming user-modify-playback-state',
+        scope:
+            'app-remote-control,streaming,user-modify-playback-state,user-read-playback-state',
       );
 
       if (_isConnected) {
@@ -72,7 +73,7 @@ class SpotifyService {
         // Try launching Spotify manually
         try {
           final spotifyUri = Uri.parse('spotify://');
-          await launchUrl(spotifyUri);
+          await launchUrl(spotifyUri, mode: LaunchMode.externalApplication);
           // Wait a moment and try connecting again
           await Future.delayed(const Duration(seconds: 2));
           return await connect();
@@ -86,14 +87,6 @@ class SpotifyService {
 
   Future<void> playAlbum(String artist, String album) async {
     try {
-      if (!_isConnected) {
-        _logger.info('Not connected to Spotify, attempting to connect...');
-        final connected = await connect();
-        if (!connected) {
-          throw Exception('Could not connect to Spotify');
-        }
-      }
-
       _logger.info('Getting Spotify access token...');
       final token = await _spotifyApi.getCredentials().then(
         (creds) => creds.accessToken,
@@ -113,9 +106,26 @@ class SpotifyService {
       if (data['albums']?['items']?.isNotEmpty) {
         final albumUri = data['albums']['items'][0]['uri'];
         if (albumUri != null) {
-          _logger.info('Found album URI: $albumUri, attempting to play...');
-          await SpotifySdk.play(spotifyUri: albumUri);
-          _logger.info('Successfully started playing: $artist - $album');
+          _logger.info(
+            'Found album URI: $albumUri, attempting to open in Spotify...',
+          );
+
+          // Convert spotify:album:1234 to spotify://album/1234
+          final spotifyId = albumUri.split(':').last;
+          final playUri = Uri.parse('spotify://album/$spotifyId');
+
+          final launched = await launchUrl(
+            playUri,
+            mode: LaunchMode.externalApplication,
+          );
+
+          if (launched) {
+            _logger.info(
+              'Successfully opened album in Spotify: $artist - $album',
+            );
+          } else {
+            throw Exception('Failed to launch Spotify with the album');
+          }
         } else {
           throw Exception('Album URI not found in Spotify response');
         }
@@ -123,7 +133,7 @@ class SpotifyService {
         throw Exception('Album not found on Spotify: $artist - $album');
       }
     } catch (e) {
-      _logger.severe('Failed to play album: $e');
+      _logger.severe('Failed to open album in Spotify: $e');
       rethrow;
     }
   }
