@@ -318,199 +318,222 @@ class VinylHomePageState extends State<VinylHomePage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Vinyl Checker')),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_left),
-                    onPressed:
-                        isFirstArtist || isLoading ? null : _previousArtist,
-                    tooltip: 'Previous Artist',
-                  ),
-                  Expanded(
-                    child: DropdownSearch<String>(
-                      popupProps: const PopupProps.menu(showSearchBox: true),
-                      asyncItems: (String filter) async {
-                        return artists
-                            .where(
-                              (artist) => artist.toLowerCase().contains(
-                                filter.toLowerCase(),
-                              ),
-                            )
-                            .toList();
-                      },
-                      onChanged:
-                          (value) => setState(() {
-                            selectedArtist = value;
-                            _updateAlbums();
-                          }),
-                      selectedItem: selectedArtist,
-                      enabled: !isLoading,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.arrow_right),
-                    onPressed: isLastArtist || isLoading ? null : _nextArtist,
-                    tooltip: 'Next Artist',
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Owned Albums:',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    'Total: ${ownedData.length}',
-                    style: const TextStyle(fontSize: 16, color: Colors.grey),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              if (ownedAlbums.isEmpty)
-                const Text('No owned albums for this artist.')
-              else
-                Column(
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children:
-                      ownedAlbums
-                          .map(
-                            (entry) => Padding(
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 4.0,
-                              ),
-                              child: GestureDetector(
-                                onTap: () async {
-                                  final coverUrl = await _fetchCoverArt(
-                                    entry['artist']!,
-                                    entry['album']!,
-                                  );
-                                  if (coverUrl != null && mounted) {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder:
-                                            (_) => CoverArtView(
-                                              artist: entry['artist']!,
-                                              album: entry['album']!,
-                                              coverUrl: coverUrl,
-                                            ),
-                                      ),
-                                    );
-                                  }
-                                },
-                                child: Text(
-                                  '${entry['album']} (${entry['release'] ?? 'N/A'})',
-                                ),
-                              ),
+                  children: [
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.arrow_left),
+                          onPressed:
+                              isFirstArtist || isLoading
+                                  ? null
+                                  : _previousArtist,
+                          tooltip: 'Previous Artist',
+                        ),
+                        Expanded(
+                          child: DropdownSearch<String>(
+                            popupProps: const PopupProps.menu(
+                              showSearchBox: true,
                             ),
-                          )
-                          .toList(),
-                ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Wanted Albums:',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    'Total Unique: ${_getUniqueWantedAlbumsCount()}',
-                    style: const TextStyle(fontSize: 16, color: Colors.grey),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              if (wantedAlbums.isEmpty)
-                const Text('No wanted albums for this artist.')
-              else
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children:
-                      wantedAlbums
-                          .map(
-                            (entry) => Padding(
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 4.0,
-                              ),
-                              child: GestureDetector(
-                                onTap: () async {
-                                  final coverUrl = await _fetchCoverArt(
-                                    entry['artist']!,
-                                    entry['album']!,
-                                  );
-                                  if (coverUrl != null && mounted) {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder:
-                                            (_) => CoverArtView(
-                                              artist: entry['artist']!,
-                                              album: entry['album']!,
-                                              coverUrl: coverUrl,
-                                            ),
-                                      ),
-                                    );
-                                  }
-                                },
-                                child: Row(
-                                  children: [
-                                    Expanded(child: Text(entry['album']!)),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'List: ${entry['columnA'] ?? 'N/A'}, Rank: ${entry['columnC'] ?? 'N/A'}',
-                                      style: const TextStyle(
-                                        color: Colors.grey,
-                                      ),
+                            asyncItems: (String filter) async {
+                              return artists
+                                  .where(
+                                    (artist) => artist.toLowerCase().contains(
+                                      filter.toLowerCase(),
                                     ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          )
-                          .toList(),
-                ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.cake),
-                    onPressed:
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (_) => AnniversariesView(
-                                  anniversaries:
-                                      getAnniversariesTodayAndTomorrow(),
-                                ),
+                                  )
+                                  .toList();
+                            },
+                            onChanged:
+                                (value) => setState(() {
+                                  selectedArtist = value;
+                                  _updateAlbums();
+                                }),
+                            selectedItem: selectedArtist,
+                            enabled: !isLoading,
                           ),
                         ),
-                    tooltip: 'Anniversaries',
-                  ),
-                  const SizedBox(width: 16),
-                  IconButton(
-                    icon: const Icon(Icons.search),
-                    onPressed: () {
-                      // Already on search view, so no-op here
-                    },
-                    tooltip: 'Search',
-                  ),
-                ],
+                        IconButton(
+                          icon: const Icon(Icons.arrow_right),
+                          onPressed:
+                              isLastArtist || isLoading ? null : _nextArtist,
+                          tooltip: 'Next Artist',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Owned Albums:',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          'Total: ${ownedData.length}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    if (ownedAlbums.isEmpty)
+                      const Text('No owned albums for this artist.')
+                    else
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children:
+                            ownedAlbums
+                                .map(
+                                  (entry) => Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 4.0,
+                                    ),
+                                    child: GestureDetector(
+                                      onTap: () async {
+                                        final coverUrl = await _fetchCoverArt(
+                                          entry['artist']!,
+                                          entry['album']!,
+                                        );
+                                        if (coverUrl != null && mounted) {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder:
+                                                  (_) => CoverArtView(
+                                                    artist: entry['artist']!,
+                                                    album: entry['album']!,
+                                                    coverUrl: coverUrl,
+                                                  ),
+                                            ),
+                                          );
+                                        }
+                                      },
+                                      child: Text(
+                                        '${entry['album']} (${entry['release'] ?? 'N/A'})',
+                                      ),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                      ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Wanted Albums:',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          'Total Unique: ${_getUniqueWantedAlbumsCount()}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    if (wantedAlbums.isEmpty)
+                      const Text('No wanted albums for this artist.')
+                    else
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children:
+                            wantedAlbums
+                                .map(
+                                  (entry) => Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 4.0,
+                                    ),
+                                    child: GestureDetector(
+                                      onTap: () async {
+                                        final coverUrl = await _fetchCoverArt(
+                                          entry['artist']!,
+                                          entry['album']!,
+                                        );
+                                        if (coverUrl != null && mounted) {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder:
+                                                  (_) => CoverArtView(
+                                                    artist: entry['artist']!,
+                                                    album: entry['album']!,
+                                                    coverUrl: coverUrl,
+                                                  ),
+                                            ),
+                                          );
+                                        }
+                                      },
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(entry['album']!),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'List: ${entry['columnA'] ?? 'N/A'}, Rank: ${entry['columnC'] ?? 'N/A'}',
+                                            style: const TextStyle(
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.cake),
+                onPressed:
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder:
+                            (_) => AnniversariesView(
+                              anniversaries: getAnniversariesTodayAndTomorrow(),
+                            ),
+                      ),
+                    ),
+                tooltip: 'Anniversaries',
+              ),
+              const SizedBox(width: 16),
+              IconButton(
+                icon: const Icon(Icons.search),
+                onPressed: () {
+                  // Already on search view, no-op
+                },
+                tooltip: 'Search',
               ),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
