@@ -8,6 +8,7 @@ import 'package:logging/logging.dart';
 import 'anniversaries_view.dart';
 import 'cover_art_view.dart';
 import 'api_utils.dart';
+import 'components/bottom_nav.dart';
 
 final _logger = Logger('VinylHomePage');
 
@@ -377,6 +378,8 @@ class VinylHomePageState extends State<VinylHomePage> {
                                                     artist: entry['artist']!,
                                                     album: entry['album']!,
                                                     coverUrl: coverUrl,
+                                                    getAnniversaries:
+                                                        getAnniversariesTodayAndTomorrow,
                                                   ),
                                             ),
                                           );
@@ -441,6 +444,8 @@ class VinylHomePageState extends State<VinylHomePage> {
                                                     artist: entry['artist']!,
                                                     album: entry['album']!,
                                                     coverUrl: coverUrl,
+                                                    getAnniversaries:
+                                                        getAnniversariesTodayAndTomorrow,
                                                   ),
                                             ),
                                           );
@@ -470,37 +475,9 @@ class VinylHomePageState extends State<VinylHomePage> {
               ),
             ),
           ),
-          Container(
-            color: Theme.of(context).appBarTheme.backgroundColor,
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.search, size: 32), // Bigger icon
-                  onPressed: () {
-                    // Already on search view, no-op
-                  },
-                  tooltip: 'Search',
-                ),
-                const SizedBox(width: 16),
-                IconButton(
-                  icon: const Icon(Icons.cake, size: 32), // Bigger icon
-                  onPressed:
-                      () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder:
-                              (_) => AnniversariesView(
-                                anniversaries:
-                                    getAnniversariesTodayAndTomorrow(),
-                              ),
-                        ),
-                      ),
-                  tooltip: 'Anniversaries',
-                ),
-              ],
-            ),
+          BottomNav(
+            isOnSearchView: true,
+            getAnniversaries: getAnniversariesTodayAndTomorrow,
           ),
         ],
       ),

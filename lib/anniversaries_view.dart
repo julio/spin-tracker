@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'api_utils.dart';
+import 'components/bottom_nav.dart';
 
 class AnniversariesView extends StatefulWidget {
   final List<Map<String, String>> anniversaries;
@@ -68,7 +69,7 @@ class AnniversariesViewState extends State<AnniversariesView> {
                                 else
                                   Image.network(
                                     snapshot.data!,
-                                    height: 120, // Larger cover
+                                    height: 120,
                                     width: 120,
                                     fit: BoxFit.cover,
                                     errorBuilder:
@@ -104,28 +105,7 @@ class AnniversariesViewState extends State<AnniversariesView> {
                       },
                     ),
           ),
-          Container(
-            color: Theme.of(context).appBarTheme.backgroundColor,
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.search, size: 32), // Bigger icon
-                  onPressed: () => Navigator.pop(context),
-                  tooltip: 'Search',
-                ),
-                const SizedBox(width: 16),
-                IconButton(
-                  icon: const Icon(Icons.cake, size: 32), // Bigger icon
-                  onPressed: () {
-                    // Already here, no-op
-                  },
-                  tooltip: 'Anniversaries',
-                ),
-              ],
-            ),
-          ),
+          const BottomNav(),
         ],
       ),
     );
