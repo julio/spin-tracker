@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:logging/logging.dart';
 import 'vinyl_home_page.dart';
 
 void main() {
+  Logger.root.level = Level.INFO;
+  Logger.root.onRecord.listen((record) {
+    debugPrint('${record.level.name}: ${record.time}: ${record.message}');
+  });
   runApp(const VinylCheckerApp());
 }
 

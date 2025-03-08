@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'anniversaries_view.dart';
 import 'vinyl_home_page.dart';
-import 'api_utils.dart';
 
 class CoverArtView extends StatelessWidget {
   final String artist;

@@ -1,8 +1,11 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:logging/logging.dart';
 import 'package:vinyl_checker/config.dart';
 
 class ApiUtils {
+  static final _logger = Logger('ApiUtils');
+
   static Future<String> getSpotifyAccessToken() async {
     final response = await http.post(
       Uri.parse('https://accounts.spotify.com/api/token'),
@@ -43,7 +46,7 @@ class ApiUtils {
       }
       return null;
     } catch (e) {
-      print('Error fetching cover art: $e');
+      _logger.warning('Error fetching cover art: $e');
       return null;
     }
   }

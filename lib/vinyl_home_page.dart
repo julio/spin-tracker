@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:googleapis/sheets/v4.dart' show SheetsApi;
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:googleapis_auth/auth_io.dart' as auth;
 import 'package:vinyl_checker/config.dart';
+import 'package:logging/logging.dart';
 import 'anniversaries_view.dart';
 import 'cover_art_view.dart';
 import 'api_utils.dart';
+
+final _logger = Logger('VinylHomePage');
 
 class VinylHomePage extends StatefulWidget {
   const VinylHomePage({super.key});
@@ -44,7 +46,7 @@ class VinylHomePageState extends State<VinylHomePage> {
       await _initializeSheetsApi();
       await _fetchData();
     } catch (e) {
-      print('Error loading data: $e');
+      _logger.severe('Error loading data: $e');
     } finally {
       setState(() => isLoading = false);
     }
@@ -59,7 +61,7 @@ class VinylHomePageState extends State<VinylHomePage> {
       ['https://www.googleapis.com/auth/spreadsheets.readonly'],
     );
     sheetsApi = SheetsApi(authClient);
-    print('Sheets API initialized successfully');
+    _logger.info('Sheets API initialized successfully');
   }
 
   Future<void> _fetchData() async {
@@ -85,7 +87,7 @@ class VinylHomePageState extends State<VinylHomePage> {
     if (ownedArtistIndex == -1 ||
         ownedAlbumIndex == -1 ||
         ownedReleaseIndex == -1) {
-      print(
+      _logger.warning(
         'Error: "Artist", "Album", or "Release" not found in Owned headers: $ownedHeaderList',
       );
       return;
@@ -93,7 +95,7 @@ class VinylHomePageState extends State<VinylHomePage> {
     if (wantedArtistIndex == -1 ||
         wantedAlbumIndex == -1 ||
         wantedCheckIndex == -1) {
-      print(
+      _logger.warning(
         'Error: "Artist", "Album", or "Check" not found in Wanted headers: $wantedHeaderList',
       );
       return;
@@ -181,7 +183,7 @@ class VinylHomePageState extends State<VinylHomePage> {
                         row.length > wantedAlbumIndex
                             ? row[wantedAlbumIndex] as String
                             : '',
-                    'columnA': row.length > 0 ? row[0] as String : '',
+                    'columnA': row.isNotEmpty ? row[0] as String : '',
                     'columnC': row.length > 2 ? row[2] as String : '',
                   },
                 )
@@ -359,14 +361,16 @@ class VinylHomePageState extends State<VinylHomePage> {
                                     ),
                                     child: GestureDetector(
                                       onTap: () async {
+                                        final ctx = context;
                                         final coverUrl =
                                             await ApiUtils.fetchCoverArt(
                                               entry['artist']!,
                                               entry['album']!,
                                             );
-                                        if (coverUrl != null && mounted) {
+                                        if (!ctx.mounted) return;
+                                        if (coverUrl != null) {
                                           Navigator.push(
-                                            context,
+                                            ctx,
                                             MaterialPageRoute(
                                               builder:
                                                   (_) => CoverArtView(
@@ -421,14 +425,16 @@ class VinylHomePageState extends State<VinylHomePage> {
                                     ),
                                     child: GestureDetector(
                                       onTap: () async {
+                                        final ctx = context;
                                         final coverUrl =
                                             await ApiUtils.fetchCoverArt(
                                               entry['artist']!,
                                               entry['album']!,
                                             );
-                                        if (coverUrl != null && mounted) {
+                                        if (!ctx.mounted) return;
+                                        if (coverUrl != null) {
                                           Navigator.push(
-                                            context,
+                                            ctx,
                                             MaterialPageRoute(
                                               builder:
                                                   (_) => CoverArtView(

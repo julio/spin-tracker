@@ -7,10 +7,10 @@ class AnniversariesView extends StatefulWidget {
   const AnniversariesView({super.key, required this.anniversaries});
 
   @override
-  _AnniversariesViewState createState() => _AnniversariesViewState();
+  AnniversariesViewState createState() => AnniversariesViewState();
 }
 
-class _AnniversariesViewState extends State<AnniversariesView> {
+class AnniversariesViewState extends State<AnniversariesView> {
   late List<Future<String?>> coverFutures;
 
   @override
