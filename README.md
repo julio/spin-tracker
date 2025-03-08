@@ -127,6 +127,54 @@ The app expects a sheet with two tabs:
 - googleapis_auth: ^1.6.0
 - logging: ^1.2.0
 
+## Music Playback Integration
+
+To add music playback functionality, you would need to:
+
+1. Add the Spotify SDK dependencies:
+   ```yaml
+   dependencies:
+     spotify_sdk: ^2.3.1  # For playback control
+     spotify_web_api: ^1.2.0  # For track information
+   ```
+
+2. Configure Spotify in your app:
+   - Add to your config.dart:
+     ```dart
+     const spotifyRedirectUri = 'your-app-scheme://callback';
+     ```
+   - Update iOS Info.plist:
+     ```xml
+     <key>CFBundleURLTypes</key>
+     <array>
+       <dict>
+         <key>CFBundleURLSchemes</key>
+         <array>
+           <string>your-app-scheme</string>
+         </array>
+       </dict>
+     </array>
+     ```
+   - Update Android AndroidManifest.xml:
+     ```xml
+     <activity>
+       <intent-filter>
+         <action android:name="android.intent.action.VIEW" />
+         <category android:name="android.intent.category.DEFAULT" />
+         <category android:name="android.intent.category.BROWSABLE" />
+         <data android:scheme="your-app-scheme" />
+       </intent-filter>
+     </activity>
+     ```
+
+3. Implementation Steps:
+   - Connect to Spotify when app launches
+   - Add playback buttons to album entries
+   - Handle authentication flow
+   - Implement play/pause/skip functionality
+
+Note: Users will need the Spotify app installed and a Premium account for full playback functionality. Free accounts can only play 30-second previews.
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.

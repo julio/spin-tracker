@@ -42,6 +42,10 @@ dependencies:
   googleapis_auth: ^1.6.0 # For authentication
   logging: ^1.2.0  # For structured logging
 
+  # Spotify integration
+  spotify_sdk: ^2.3.1
+  spotify: ^0.13.7  # Using latest compatible version
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

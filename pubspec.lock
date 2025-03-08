@@ -97,6 +97,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.8"
+  dio:
+    dependency: transitive
+    description:
+      name: dio
+      sha256: "7d328c4d898a61efc3cd93655a0955858e29a0aa647f0f9e02d59b3bb275e2e8"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.0.6"
   dropdown_search:
     dependency: "direct main"
     description:
@@ -144,6 +152,11 @@ packages:
     version: "5.0.0"
   flutter_test:
     dependency: "direct dev"
+    description: flutter
+    source: sdk
+    version: "0.0.0"
+  flutter_web_plugins:
+    dependency: transitive
     description: flutter
     source: sdk
     version: "0.0.0"
@@ -195,6 +208,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.5.3"
+  js:
+    dependency: transitive
+    description:
+      name: js
+      sha256: f2c445dce49627136094980615a031419f7f3eb393237e4ecd97ac15dea343f3
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.6.7"
   json_annotation:
     dependency: transitive
     description:
@@ -235,6 +256,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "5.1.1"
+  logger:
+    dependency: transitive
+    description:
+      name: logger
+      sha256: "7ad7215c15420a102ec687bb320a7312afd449bac63bfb1c60d9787c27b9767f"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.4.0"
   logging:
     dependency: "direct main"
     description:
@@ -267,6 +296,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.16.0"
+  oauth2:
+    dependency: transitive
+    description:
+      name: oauth2
+      sha256: c84470642cbb2bec450ccab2f8520c079cd1ca546a76ffd5c40589e07f4e8bf4
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.3"
   path:
     dependency: transitive
     description:
@@ -304,6 +341,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.10.1"
+  spotify:
+    dependency: "direct main"
+    description:
+      name: spotify
+      sha256: "705f09a457a893973451c15f4072670ac4783d67e42c35c080c55a48dee3a01f"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.13.7"
+  spotify_sdk:
+    dependency: "direct main"
+    description:
+      name: spotify_sdk
+      sha256: e61cb0b29d58db209847c0baf27084143d2288792b2e1d19bf8a3a3e2030a64b
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.3.1"
   stack_trace:
     dependency: transitive
     description:
@@ -328,6 +381,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.1"
+  synchronized:
+    dependency: transitive
+    description:
+      name: synchronized
+      sha256: "0669c70faae6270521ee4f05bffd2919892d42d1276e6c495be80174b6bc0ef6"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.3.1"
   term_glyph:
     dependency: transitive
     description:
