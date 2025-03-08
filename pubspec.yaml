@@ -45,6 +45,7 @@ dependencies:
   # Spotify integration
   spotify_sdk: ^2.3.1
   spotify: ^0.13.7  # Using latest compatible version
+  url_launcher: ^6.2.5  # For launching URLs and deep links
 
 dev_dependencies:
   flutter_test:

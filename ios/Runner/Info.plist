@@ -51,5 +51,25 @@
 	<array>
 		<string>_dartobservatory._tcp</string>
 	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>vinyl-checker</string>
+			</array>
+			<key>CFBundleURLName</key>
+			<string>com.morgane.vinylChecker</string>
+		</dict>
+	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>spotify</string>
+		<string>spotify-action</string>
+		<string>spotify-auth</string>
+		<string>spotify-app</string>
+		<string>spotify-connect</string>
+		<string>spotify-streaming</string>
+	</array>
 </dict>
 </plist>
