@@ -7,6 +7,7 @@ import 'package:googleapis_auth/auth_io.dart' as auth;
 import 'package:vinyl_checker/config.dart';
 import 'anniversaries_view.dart';
 import 'cover_art_view.dart';
+import 'api_utils.dart';
 
 class VinylHomePage extends StatefulWidget {
   const VinylHomePage({super.key});
@@ -260,51 +261,6 @@ class VinylHomePageState extends State<VinylHomePage> {
         .toList();
   }
 
-  Future<String> _getSpotifyAccessToken() async {
-    final response = await http.post(
-      Uri.parse('https://accounts.spotify.com/api/token'),
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: {
-        'grant_type': 'client_credentials',
-        'client_id': spotifyClientId,
-        'client_secret': spotifyClientSecret,
-      },
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return data['access_token'];
-    } else {
-      throw Exception('Failed to get Spotify token: ${response.statusCode}');
-    }
-  }
-
-  Future<String?> _fetchCoverArt(String artist, String album) async {
-    try {
-      final token = await _getSpotifyAccessToken();
-      final query = Uri.encodeQueryComponent('artist:$artist album:$album');
-      final response = await http.get(
-        Uri.parse('https://api.spotify.com/v1/search?q=$query&type=album'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final items = data['albums']['items'] as List<dynamic>;
-        if (items.isNotEmpty) {
-          final images = items[0]['images'] as List<dynamic>;
-          if (images.isNotEmpty) {
-            return images[0]['url'] as String;
-          }
-        }
-      }
-      return null;
-    } catch (e) {
-      print('Error fetching cover art: $e');
-      return null;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final isFirstArtist =
@@ -403,10 +359,11 @@ class VinylHomePageState extends State<VinylHomePage> {
                                     ),
                                     child: GestureDetector(
                                       onTap: () async {
-                                        final coverUrl = await _fetchCoverArt(
-                                          entry['artist']!,
-                                          entry['album']!,
-                                        );
+                                        final coverUrl =
+                                            await ApiUtils.fetchCoverArt(
+                                              entry['artist']!,
+                                              entry['album']!,
+                                            );
                                         if (coverUrl != null && mounted) {
                                           Navigator.push(
                                             context,
@@ -464,10 +421,11 @@ class VinylHomePageState extends State<VinylHomePage> {
                                     ),
                                     child: GestureDetector(
                                       onTap: () async {
-                                        final coverUrl = await _fetchCoverArt(
-                                          entry['artist']!,
-                                          entry['album']!,
-                                        );
+                                        final coverUrl =
+                                            await ApiUtils.fetchCoverArt(
+                                              entry['artist']!,
+                                              entry['album']!,
+                                            );
                                         if (coverUrl != null && mounted) {
                                           Navigator.push(
                                             context,
@@ -506,32 +464,37 @@ class VinylHomePageState extends State<VinylHomePage> {
               ),
             ),
           ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.search),
-                onPressed: () {
-                  // Already on search view, no-op
-                },
-                tooltip: 'Search',
-              ),
-              const SizedBox(width: 16),
-              IconButton(
-                icon: const Icon(Icons.cake),
-                onPressed:
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder:
-                            (_) => AnniversariesView(
-                              anniversaries: getAnniversariesTodayAndTomorrow(),
-                            ),
+          Container(
+            color: Theme.of(context).appBarTheme.backgroundColor,
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.search, size: 32), // Bigger icon
+                  onPressed: () {
+                    // Already on search view, no-op
+                  },
+                  tooltip: 'Search',
+                ),
+                const SizedBox(width: 16),
+                IconButton(
+                  icon: const Icon(Icons.cake, size: 32), // Bigger icon
+                  onPressed:
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (_) => AnniversariesView(
+                                anniversaries:
+                                    getAnniversariesTodayAndTomorrow(),
+                              ),
+                        ),
                       ),
-                    ),
-                tooltip: 'Anniversaries',
-              ),
-            ],
+                  tooltip: 'Anniversaries',
+                ),
+              ],
+            ),
           ),
         ],
       ),
