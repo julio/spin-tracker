@@ -78,22 +78,7 @@ class DiscogsService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final releases = List<Map<String, dynamic>>.from(data['releases']);
-
-        // Get detailed information for each release
-        for (var release in releases) {
-          final basicInfo =
-              release['basic_information'] as Map<String, dynamic>;
-          final details = await getReleaseDetails(basicInfo['id'] as int);
-          if (details != null && details['images'] != null) {
-            final images = details['images'] as List;
-            if (images.isNotEmpty) {
-              basicInfo['thumb'] = images.first['uri150'] ?? '';
-            }
-          }
-        }
-
-        return releases;
+        return List<Map<String, dynamic>>.from(data['releases']);
       } else {
         _logger.warning(
           'Failed to get collection releases: ${response.statusCode}\nResponse: ${response.body}',
@@ -103,6 +88,21 @@ class DiscogsService {
     } catch (e) {
       _logger.severe('Error getting collection releases: $e');
       rethrow;
+    }
+  }
+
+  Future<void> loadReleaseThumbnail(Map<String, dynamic> release) async {
+    try {
+      final basicInfo = release['basic_information'] as Map<String, dynamic>;
+      final details = await getReleaseDetails(basicInfo['id'] as int);
+      if (details != null && details['images'] != null) {
+        final images = details['images'] as List;
+        if (images.isNotEmpty) {
+          basicInfo['thumb'] = images.first['uri150'] ?? '';
+        }
+      }
+    } catch (e) {
+      _logger.warning('Error loading thumbnail for release: $e');
     }
   }
 }

@@ -26,9 +26,6 @@ class DiscogsCollectionViewState extends State<DiscogsCollectionView> {
   @override
   void initState() {
     super.initState();
-    print(
-      'DiscogsCollectionView: ownedAlbums length = ${widget.ownedAlbums.length}',
-    );
     _loadData();
   }
 
@@ -47,6 +44,15 @@ class DiscogsCollectionViewState extends State<DiscogsCollectionView> {
         releases = collectionReleases;
         isLoading = false;
       });
+
+      // Load thumbnails after displaying the initial data
+      for (var release in releases) {
+        await _discogsService.loadReleaseThumbnail(release);
+        // Update the UI when each thumbnail is loaded
+        if (mounted) {
+          setState(() {});
+        }
+      }
     } catch (e) {
       setState(() {
         error = e.toString();
@@ -105,10 +111,6 @@ class DiscogsCollectionViewState extends State<DiscogsCollectionView> {
                                   release['basic_information']
                                       as Map<String, dynamic>;
                               final dateAdded = release['date_added'] as String;
-
-                              print(
-                                'Release $index thumbnail: ${basicInformation['thumb']}',
-                              );
 
                               return Card(
                                 margin: const EdgeInsets.symmetric(
