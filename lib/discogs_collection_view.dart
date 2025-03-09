@@ -106,6 +106,10 @@ class DiscogsCollectionViewState extends State<DiscogsCollectionView> {
                                       as Map<String, dynamic>;
                               final dateAdded = release['date_added'] as String;
 
+                              print(
+                                'Release $index thumbnail: ${basicInformation['thumb']}',
+                              );
+
                               return Card(
                                 margin: const EdgeInsets.symmetric(
                                   horizontal: 16.0,
@@ -115,15 +119,16 @@ class DiscogsCollectionViewState extends State<DiscogsCollectionView> {
                                   padding: const EdgeInsets.all(8.0),
                                   child: Row(
                                     children: [
-                                      if (basicInformation['cover_image'] !=
-                                          null)
+                                      if (basicInformation['thumb'] != null &&
+                                          basicInformation['thumb']
+                                              .toString()
+                                              .isNotEmpty)
                                         ClipRRect(
                                           borderRadius: BorderRadius.circular(
                                             4.0,
                                           ),
                                           child: Image.network(
-                                            basicInformation['cover_image']
-                                                as String,
+                                            basicInformation['thumb'] as String,
                                             width: 80,
                                             height: 80,
                                             fit: BoxFit.cover,
