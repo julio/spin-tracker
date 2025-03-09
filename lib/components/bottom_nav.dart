@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../anniversaries_view.dart';
-import '../vinyl_home_page.dart';
 import '../random_album_view.dart';
 
 class BottomNav extends StatelessWidget {

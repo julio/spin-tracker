@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'services/spotify_service.dart';
 import 'components/bottom_nav.dart';
-import 'vinyl_home_page.dart';
 
 class CoverArtView extends StatefulWidget {
   final String artist;
@@ -26,7 +25,6 @@ class CoverArtView extends StatefulWidget {
 class CoverArtViewState extends State<CoverArtView> {
   final _spotifyService = SpotifyService();
   bool _isPlaying = false;
-  final _vinylHomePageState = VinylHomePageState();
 
   @override
   Widget build(BuildContext context) {
