@@ -4,8 +4,15 @@ import 'components/bottom_nav.dart';
 
 class AnniversariesView extends StatefulWidget {
   final List<Map<String, String>> anniversaries;
+  final List<Map<String, String>> ownedAlbums;
+  final List<Map<String, String>> Function() getAnniversaries;
 
-  const AnniversariesView({super.key, required this.anniversaries});
+  const AnniversariesView({
+    super.key,
+    required this.anniversaries,
+    required this.ownedAlbums,
+    required this.getAnniversaries,
+  });
 
   @override
   AnniversariesViewState createState() => AnniversariesViewState();
@@ -47,8 +54,7 @@ class AnniversariesViewState extends State<AnniversariesView> {
                             crossAxisCount: 2,
                             crossAxisSpacing: 8.0,
                             mainAxisSpacing: 8.0,
-                            childAspectRatio:
-                                0.65, // Adjusted for larger cover + extra text
+                            childAspectRatio: 0.65,
                           ),
                       itemCount: widget.anniversaries.length,
                       itemBuilder: (context, index) {
@@ -105,7 +111,11 @@ class AnniversariesViewState extends State<AnniversariesView> {
                       },
                     ),
           ),
-          const BottomNav(),
+          BottomNav(
+            isOnSearchView: false,
+            getAnniversaries: widget.getAnniversaries,
+            ownedAlbums: widget.ownedAlbums,
+          ),
         ],
       ),
     );

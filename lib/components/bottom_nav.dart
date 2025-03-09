@@ -71,13 +71,15 @@ class BottomNav extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.cake, size: 32),
             onPressed:
-                getAnniversaries != null
+                getAnniversaries != null && ownedAlbums != null
                     ? () => Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder:
                             (_) => AnniversariesView(
                               anniversaries: getAnniversaries!(),
+                              ownedAlbums: ownedAlbums!,
+                              getAnniversaries: getAnniversaries!,
                             ),
                       ),
                     )

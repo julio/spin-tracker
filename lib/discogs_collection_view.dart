@@ -26,6 +26,9 @@ class DiscogsCollectionViewState extends State<DiscogsCollectionView> {
   @override
   void initState() {
     super.initState();
+    print(
+      'DiscogsCollectionView: ownedAlbums length = ${widget.ownedAlbums.length}',
+    );
     _loadData();
   }
 
