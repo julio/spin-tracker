@@ -141,56 +141,63 @@ class VinylHomePageState extends State<VinylHomePage> {
         wantedAlbums = [];
       } else {
         final lowercaseArtist = selectedArtist!.toLowerCase();
-        ownedAlbums =
-            ownedData
-                .where(
-                  (row) =>
-                      row.length > ownedArtistIndex &&
-                      (row[ownedArtistIndex] as String).toLowerCase() ==
-                          lowercaseArtist,
-                )
-                .map(
-                  (row) => {
-                    'artist': row[ownedArtistIndex] as String,
-                    'album':
-                        row.length > ownedAlbumIndex
-                            ? row[ownedAlbumIndex] as String
-                            : '',
-                    'release':
-                        row.length > ownedReleaseIndex
-                            ? row[ownedReleaseIndex] as String
-                            : '',
-                  },
-                )
-                .where((entry) => entry['album']!.isNotEmpty)
-                .toList()
-              ..sort((a, b) => a['release']!.compareTo(b['release']!));
-
-        wantedAlbums =
-            wantedData
-                .where(
-                  (row) =>
-                      row.length > wantedCheckIndex &&
-                      row.length > wantedArtistIndex &&
-                      (row[wantedArtistIndex] as String).toLowerCase() ==
-                          lowercaseArtist &&
-                      (row[wantedCheckIndex] as String).toLowerCase() == 'no',
-                )
-                .map(
-                  (row) => {
-                    'artist': row[wantedArtistIndex] as String,
-                    'album':
-                        row.length > wantedAlbumIndex
-                            ? row[wantedAlbumIndex] as String
-                            : '',
-                    'columnA': row.isNotEmpty ? row[0] as String : '',
-                    'columnC': row.length > 2 ? row[2] as String : '',
-                  },
-                )
-                .where((entry) => entry['album']!.isNotEmpty)
-                .toList();
+        getOwnedAlbums(lowercaseArtist);
+        getWantedAlbums(lowercaseArtist);
       }
     });
+  }
+
+  void getWantedAlbums(String lowercaseArtist) {
+    wantedAlbums =
+        wantedData
+            .where(
+              (row) =>
+                  row.length > wantedCheckIndex &&
+                  row.length > wantedArtistIndex &&
+                  (row[wantedArtistIndex] as String).toLowerCase() ==
+                      lowercaseArtist &&
+                  (row[wantedCheckIndex] as String).toLowerCase() == 'no',
+            )
+            .map(
+              (row) => {
+                'artist': row[wantedArtistIndex] as String,
+                'album':
+                    row.length > wantedAlbumIndex
+                        ? row[wantedAlbumIndex] as String
+                        : '',
+                // 'columnA': row.isNotEmpty ? row[0] as String : '',
+                // 'columnC': row.length > 2 ? row[2] as String : '',
+              },
+            )
+            .where((entry) => entry['album']!.isNotEmpty)
+            .toList();
+  }
+
+  void getOwnedAlbums(String lowercaseArtist) {
+    ownedAlbums =
+        ownedData
+            .where(
+              (row) =>
+                  row.length > ownedArtistIndex &&
+                  (row[ownedArtistIndex] as String).toLowerCase() ==
+                      lowercaseArtist,
+            )
+            .map(
+              (row) => {
+                'artist': row[ownedArtistIndex] as String,
+                'album':
+                    row.length > ownedAlbumIndex
+                        ? row[ownedAlbumIndex] as String
+                        : '',
+                'release':
+                    row.length > ownedReleaseIndex
+                        ? row[ownedReleaseIndex] as String
+                        : '',
+              },
+            )
+            .where((entry) => entry['album']!.isNotEmpty)
+            .toList()
+          ..sort((a, b) => a['release']!.compareTo(b['release']!));
   }
 
   void _previousArtist() {
