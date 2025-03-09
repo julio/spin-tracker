@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../anniversaries_view.dart';
 import '../random_album_view.dart';
+import '../discogs_collection_view.dart';
 
 class BottomNav extends StatelessWidget {
   final bool isOnSearchView;
@@ -47,6 +48,24 @@ class BottomNav extends StatelessWidget {
                     )
                     : null),
             tooltip: 'Random Album',
+          ),
+          const SizedBox(width: 16),
+          IconButton(
+            icon: const Icon(Icons.album, size: 32),
+            onPressed:
+                ownedAlbums != null && getAnniversaries != null
+                    ? () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder:
+                            (_) => DiscogsCollectionView(
+                              ownedAlbums: ownedAlbums!,
+                              getAnniversaries: getAnniversaries!,
+                            ),
+                      ),
+                    )
+                    : null,
+            tooltip: 'Discogs Collection',
           ),
           const SizedBox(width: 16),
           IconButton(
