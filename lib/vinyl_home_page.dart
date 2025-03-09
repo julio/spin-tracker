@@ -11,6 +11,8 @@ import 'components/bottom_nav.dart';
 
 final _logger = Logger('VinylHomePage');
 
+enum SortOption { dateAdded, artistAlbum }
+
 class VinylHomePage extends StatefulWidget {
   const VinylHomePage({super.key});
 
@@ -33,6 +35,7 @@ class VinylHomePageState extends State<VinylHomePage> {
   List<List<dynamic>> ownedData = [];
   List<List<dynamic>> wantedData = [];
   bool isLoading = true;
+  SortOption currentSortOption = SortOption.dateAdded;
 
   @override
   void initState() {
@@ -174,7 +177,7 @@ class VinylHomePageState extends State<VinylHomePage> {
   }
 
   void getOwnedAlbums(String lowercaseArtist) {
-    ownedAlbums =
+    var albums =
         ownedData
             .where(
               (row) =>
@@ -196,8 +199,22 @@ class VinylHomePageState extends State<VinylHomePage> {
               },
             )
             .where((entry) => entry['album']!.isNotEmpty)
-            .toList()
-          ..sort((a, b) => a['release']!.compareTo(b['release']!));
+            .toList();
+
+    // Apply sorting based on current option
+    if (currentSortOption == SortOption.dateAdded) {
+      albums.sort((a, b) => a['release']!.compareTo(b['release']!));
+    } else {
+      albums.sort((a, b) {
+        int artistCompare = a['artist']!.compareTo(b['artist']!);
+        if (artistCompare != 0) return artistCompare;
+        return a['album']!.compareTo(b['album']!);
+      });
+    }
+
+    setState(() {
+      ownedAlbums = albums;
+    });
   }
 
   void _previousArtist() {
@@ -282,7 +299,33 @@ class VinylHomePageState extends State<VinylHomePage> {
         artists.indexOf(selectedArtist!.toLowerCase()) == artists.length - 1;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Vinyl Checker')),
+      appBar: AppBar(
+        title: const Text('Vinyl Checker'),
+        actions: [
+          PopupMenuButton<SortOption>(
+            icon: const Icon(Icons.sort),
+            onSelected: (SortOption option) {
+              setState(() {
+                currentSortOption = option;
+                if (selectedArtist != null) {
+                  getOwnedAlbums(selectedArtist!.toLowerCase());
+                }
+              });
+            },
+            itemBuilder:
+                (BuildContext context) => [
+                  const PopupMenuItem(
+                    value: SortOption.dateAdded,
+                    child: Text('Sort by Date Added'),
+                  ),
+                  const PopupMenuItem(
+                    value: SortOption.artistAlbum,
+                    child: Text('Sort by Artist/Album'),
+                  ),
+                ],
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Expanded(
