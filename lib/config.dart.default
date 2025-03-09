@@ -1,0 +1,6 @@
+// Populate fields and remove ".default" from name
+
+const spreadsheetId = 'SPREADSHEED_ID';
+const String spotifyClientId = 'SPOTIFY_CLIENT_ID';
+const String spotifyClientSecret = 'SPOTIFY_CLIENT_SECRET';
+const spotifyRedirectUri = 'vinyl-checker://callback';

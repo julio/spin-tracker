@@ -8,6 +8,7 @@ class CoverArtView extends StatefulWidget {
   final String album;
   final String coverUrl;
   final List<Map<String, String>> Function() getAnniversaries;
+  final List<Map<String, String>> ownedAlbums;
 
   const CoverArtView({
     super.key,
@@ -15,6 +16,7 @@ class CoverArtView extends StatefulWidget {
     required this.album,
     required this.coverUrl,
     required this.getAnniversaries,
+    required this.ownedAlbums,
   });
 
   @override
@@ -90,6 +92,7 @@ class CoverArtViewState extends State<CoverArtView> {
           BottomNav(
             isOnSearchView: false,
             getAnniversaries: widget.getAnniversaries,
+            ownedAlbums: widget.ownedAlbums,
           ),
         ],
       ),

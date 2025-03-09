@@ -5,7 +5,6 @@ import 'package:dropdown_search/dropdown_search.dart';
 import 'package:googleapis_auth/auth_io.dart' as auth;
 import 'package:vinyl_checker/config.dart';
 import 'package:logging/logging.dart';
-import 'anniversaries_view.dart';
 import 'cover_art_view.dart';
 import 'api_utils.dart';
 import 'components/bottom_nav.dart';
@@ -380,6 +379,22 @@ class VinylHomePageState extends State<VinylHomePage> {
                                                     coverUrl: coverUrl,
                                                     getAnniversaries:
                                                         getAnniversariesTodayAndTomorrow,
+                                                    ownedAlbums:
+                                                        ownedData
+                                                            .map(
+                                                              (row) => {
+                                                                'artist':
+                                                                    row[ownedArtistIndex]
+                                                                        as String,
+                                                                'album':
+                                                                    row[ownedAlbumIndex]
+                                                                        as String,
+                                                                'release':
+                                                                    row[ownedReleaseIndex]
+                                                                        as String,
+                                                              },
+                                                            )
+                                                            .toList(),
                                                   ),
                                             ),
                                           );
@@ -446,6 +461,22 @@ class VinylHomePageState extends State<VinylHomePage> {
                                                     coverUrl: coverUrl,
                                                     getAnniversaries:
                                                         getAnniversariesTodayAndTomorrow,
+                                                    ownedAlbums:
+                                                        ownedData
+                                                            .map(
+                                                              (row) => {
+                                                                'artist':
+                                                                    row[ownedArtistIndex]
+                                                                        as String,
+                                                                'album':
+                                                                    row[ownedAlbumIndex]
+                                                                        as String,
+                                                                'release':
+                                                                    row[ownedReleaseIndex]
+                                                                        as String,
+                                                              },
+                                                            )
+                                                            .toList(),
                                                   ),
                                             ),
                                           );
@@ -478,6 +509,16 @@ class VinylHomePageState extends State<VinylHomePage> {
           BottomNav(
             isOnSearchView: true,
             getAnniversaries: getAnniversariesTodayAndTomorrow,
+            ownedAlbums:
+                ownedData
+                    .map(
+                      (row) => {
+                        'artist': row[ownedArtistIndex] as String,
+                        'album': row[ownedAlbumIndex] as String,
+                        'release': row[ownedReleaseIndex] as String,
+                      },
+                    )
+                    .toList(),
           ),
         ],
       ),
