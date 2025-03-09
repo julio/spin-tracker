@@ -66,12 +66,14 @@ class DiscogsService {
 
   Future<List<Map<String, dynamic>>> getCollectionReleases({
     int page = 1,
-    int perPage = 10,
+    int perPage = 50,
+    String sort = 'added',
+    String sortOrder = 'desc',
   }) async {
     try {
       final response = await http.get(
         Uri.parse(
-          'https://api.discogs.com/users/$discogsUsername/collection/folders/0/releases?page=$page&per_page=$perPage',
+          'https://api.discogs.com/users/$discogsUsername/collection/folders/0/releases?page=$page&per_page=$perPage&sort=$sort&sort_order=$sortOrder',
         ),
         headers: _headers,
       );
