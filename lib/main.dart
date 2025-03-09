@@ -3,10 +3,16 @@ import 'package:logging/logging.dart';
 import 'vinyl_home_page.dart';
 
 void main() {
+  // Configure logging
   Logger.root.level = Level.INFO;
   Logger.root.onRecord.listen((record) {
-    debugPrint('${record.level.name}: ${record.time}: ${record.message}');
+    // Filter out iOS system messages
+    if (!record.message.contains('Failed to index parameter type') &&
+        !record.message.contains('Preferred localizations')) {
+      print('${record.level.name}: ${record.time}: ${record.message}');
+    }
   });
+
   runApp(const VinylCheckerApp());
 }
 
@@ -18,18 +24,11 @@ class VinylCheckerApp extends StatelessWidget {
     return MaterialApp(
       title: 'Vinyl Checker',
       theme: ThemeData(
-        brightness: Brightness.dark,
-        primarySwatch: Colors.blueGrey,
-        scaffoldBackgroundColor: Colors.grey[900],
-        textTheme: const TextTheme(
-          bodyMedium: TextStyle(color: Colors.white),
-          titleLarge: TextStyle(color: Colors.white),
-        ),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.blueGrey,
-          foregroundColor: Colors.white,
-        ),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
       ),
+      darkTheme: ThemeData.dark(useMaterial3: true),
+      themeMode: ThemeMode.dark,
       home: const VinylHomePage(),
     );
   }
