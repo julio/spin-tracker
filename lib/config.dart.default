@@ -1,6 +1,24 @@
 // Populate fields and remove ".default" from name
 
+// googlesheet
+
 const spreadsheetId = 'SPREADSHEED_ID';
+
+// spotify
+
 const String spotifyClientId = 'SPOTIFY_CLIENT_ID';
 const String spotifyClientSecret = 'SPOTIFY_CLIENT_SECRET';
 const spotifyRedirectUri = 'vinyl-checker://callback';
+
+// discogs
+
+const String discogsConsumerKey = 'discogsConsumerKey';
+const String discogsConsumerSecret = 'discogsConsumerSecret';
+const String discogsRequestTokenURL =
+    'https://api.discogs.com/oauth/request_token';
+const String discogsAuthorizeURL = 'https://www.discogs.com/oauth/authorize';
+const String discogsAccessTokenURL =
+    'https://api.discogs.com/oauth/access_token';
+const String discogsPersonalAccessToken =
+    'discogsPersonalAccessToken';
+const String discogsUsername = 'discogsUsername';
