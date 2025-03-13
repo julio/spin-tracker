@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../anniversaries_view.dart';
 import '../random_album_view.dart';
 import '../discogs_collection_view.dart';
+import 'theme_toggle_button.dart';
 
 class BottomNav extends StatelessWidget {
   final bool isOnSearchView;
@@ -86,6 +87,8 @@ class BottomNav extends StatelessWidget {
                     : null,
             tooltip: 'Anniversaries',
           ),
+          const SizedBox(width: 16),
+          const ThemeToggleButton(),
         ],
       ),
     );
