@@ -30,7 +30,14 @@ class VinylCheckerApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      darkTheme: ThemeData.dark(useMaterial3: true),
+      darkTheme: ThemeData.dark(useMaterial3: true).copyWith(
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF1E1E1E), // Slightly lighter than black
+        ),
+        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+          backgroundColor: Color(0xFF1E1E1E), // Matching app bar color
+        ),
+      ),
       themeMode: ThemeMode.dark,
       home: const VinylHomePage(),
     );
