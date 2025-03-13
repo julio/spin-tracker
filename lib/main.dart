@@ -33,11 +33,20 @@ class _VinylCheckerAppState extends State<VinylCheckerApp> {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+      ).copyWith(
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color.fromARGB(255, 255, 0, 0),
+        ),
+        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+          backgroundColor: Color.fromARGB(255, 255, 0, 0),
+        ),
       ),
       darkTheme: ThemeData.dark(useMaterial3: true).copyWith(
-        appBarTheme: AppBarTheme(backgroundColor: const Color(0xFF1E1E1E)),
-        bottomNavigationBarTheme: BottomNavigationBarThemeData(
-          backgroundColor: const Color(0xFF1E1E1E),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color.fromARGB(255, 40, 0, 30),
+        ),
+        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+          backgroundColor: Color.fromARGB(255, 40, 0, 30),
         ),
       ),
       themeMode: _themeMode,
