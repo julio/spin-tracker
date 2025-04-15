@@ -19,7 +19,7 @@ class DiscogsService {
 
   Map<String, String> get _headers => {
     'Authorization': 'Discogs token $discogsPersonalAccessToken',
-    'User-Agent': 'VinylChecker/1.0',
+    'User-Agent': 'SpinTracker/1.0',
   };
 
   Future<Map<String, dynamic>> getCollectionInfo() async {

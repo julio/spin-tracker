@@ -2,21 +2,21 @@ import 'package:flutter/material.dart';
 import 'vinyl_home_page.dart';
 
 void main() {
-  runApp(const VinylCheckerApp());
+  runApp(const SpinTrackerApp());
 }
 
-class VinylCheckerApp extends StatefulWidget {
-  const VinylCheckerApp({super.key});
+class SpinTrackerApp extends StatefulWidget {
+  const SpinTrackerApp({super.key});
 
-  static _VinylCheckerAppState? of(BuildContext context) {
-    return context.findAncestorStateOfType<_VinylCheckerAppState>();
+  static _SpinTrackerAppState? of(BuildContext context) {
+    return context.findAncestorStateOfType<_SpinTrackerAppState>();
   }
 
   @override
-  State<VinylCheckerApp> createState() => _VinylCheckerAppState();
+  State<SpinTrackerApp> createState() => _SpinTrackerAppState();
 }
 
-class _VinylCheckerAppState extends State<VinylCheckerApp> {
+class _SpinTrackerAppState extends State<SpinTrackerApp> {
   ThemeMode _themeMode = ThemeMode.dark;
 
   void toggleTheme() {
@@ -29,7 +29,7 @@ class _VinylCheckerAppState extends State<VinylCheckerApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Vinyl Checker',
+      title: 'Spin Tracker',
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),

@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Vinyl Checker</string>
+	<string>Spin Tracker</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,7 +15,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>vinyl_checker</string>
+	<string>spin_tracker</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -56,10 +56,10 @@
 		<dict>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>vinyl-checker</string>
+				<string>spin-tracker</string>
 			</array>
 			<key>CFBundleURLName</key>
-			<string>com.morgane.vinylChecker</string>
+			<string>com.morgane.spinTracker</string>
 		</dict>
 	</array>
 	<key>LSApplicationQueriesSchemes</key>

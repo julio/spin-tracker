@@ -1,4 +1,4 @@
-package com.example.vinyl_checker
+package com.example.spin_tracker
 
 import io.flutter.embedding.android.FlutterActivity
 

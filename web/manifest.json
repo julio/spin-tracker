@@ -1,6 +1,6 @@
 {
-    "name": "vinyl_checker",
-    "short_name": "vinyl_checker",
+    "name": "spin_tracker",
+    "short_name": "spin_tracker",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

@@ -3,7 +3,7 @@ import 'package:googleapis/sheets/v4.dart' show SheetsApi;
 import 'dart:convert';
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:googleapis_auth/auth_io.dart' as auth;
-import 'package:vinyl_checker/config.dart';
+import 'package:spin_tracker/config.dart';
 import 'package:logging/logging.dart';
 import 'cover_art_view.dart';
 import 'api_utils.dart';
@@ -300,7 +300,7 @@ class VinylHomePageState extends State<VinylHomePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Vinyl Checker'),
+        title: const Text('Spin Tracker'),
         actions: [
           PopupMenuButton<SortOption>(
             icon: const Icon(Icons.sort),

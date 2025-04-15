@@ -10,7 +10,7 @@ class ThemeToggleButton extends StatelessWidget {
     return IconButton(
       icon: Icon(isDarkMode ? Icons.light_mode : Icons.dark_mode, size: 32),
       onPressed: () {
-        VinylCheckerApp.of(context)?.toggleTheme();
+        SpinTrackerApp.of(context)?.toggleTheme();
       },
       tooltip: isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode',
     );
