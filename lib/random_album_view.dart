@@ -31,7 +31,6 @@ class RandomAlbumViewState extends State<RandomAlbumView> {
   Future<void> _pickRandomAlbum() async {
     setState(() => isLoading = true);
 
-    // Pick a random album
     final albums = widget.ownedAlbums;
     if (albums.isEmpty) {
       setState(() {
@@ -45,7 +44,6 @@ class RandomAlbumViewState extends State<RandomAlbumView> {
     final randomAlbum =
         albums[DateTime.now().millisecondsSinceEpoch % albums.length];
 
-    // Fetch its cover art
     final newCoverUrl = await ApiUtils.fetchCoverArt(
       randomAlbum['artist']!,
       randomAlbum['album']!,
@@ -60,6 +58,10 @@ class RandomAlbumViewState extends State<RandomAlbumView> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final artSize = screenWidth * 0.75;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Random Album'),
@@ -73,66 +75,85 @@ class RandomAlbumViewState extends State<RandomAlbumView> {
                     ? const Center(child: CircularProgressIndicator())
                     : currentAlbum == null
                     ? const Center(child: Text('No albums available'))
-                    : Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        if (coverUrl != null)
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder:
-                                      (_) => CoverArtView(
+                    : Center(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            if (coverUrl != null)
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => CoverArtView(
                                         artist: currentAlbum!['artist']!,
                                         album: currentAlbum!['album']!,
                                         coverUrl: coverUrl!,
-                                        getAnniversaries:
-                                            widget.getAnniversaries,
+                                        getAnniversaries: widget.getAnniversaries,
                                         ownedAlbums: widget.ownedAlbums,
                                       ),
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.25),
+                                        blurRadius: 24,
+                                        offset: const Offset(0, 8),
+                                      ),
+                                    ],
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: Image.network(
+                                      coverUrl!,
+                                      height: artSize,
+                                      width: artSize,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
                                 ),
-                              );
-                            },
-                            child: Image.network(
-                              coverUrl!,
-                              height: 300,
-                              width: 300,
-                              fit: BoxFit.cover,
+                              )
+                            else
+                              Icon(
+                                Icons.album_rounded,
+                                size: artSize * 0.6,
+                                color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
+                              ),
+                            const SizedBox(height: 24),
+                            Text(
+                              currentAlbum!['album']!,
+                              style: theme.textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                              textAlign: TextAlign.center,
                             ),
-                          )
-                        else
-                          const Icon(Icons.album, size: 300),
-                        const SizedBox(height: 20),
-                        Text(
-                          currentAlbum!['album']!,
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          currentAlbum!['artist']!,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            color: Colors.grey,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        if (currentAlbum!['release'] != null) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            currentAlbum!['release']!,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey,
+                            const SizedBox(height: 6),
+                            Text(
+                              currentAlbum!['artist']!,
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                              ),
+                              textAlign: TextAlign.center,
                             ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ],
+                            if (currentAlbum!['release'] != null &&
+                                currentAlbum!['release']!.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                currentAlbum!['release']!,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
                     ),
           ),
           BottomNav(

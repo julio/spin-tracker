@@ -28,15 +28,25 @@ class CoverArtViewState extends State<CoverArtView> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final artSize = screenWidth * 0.8;
+
     return Scaffold(
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(widget.album),
+            Text(
+              widget.album,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
             Text(
               widget.artist,
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
+              style: TextStyle(
+                fontSize: 13,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
             ),
           ],
         ),
@@ -47,23 +57,46 @@ class CoverArtViewState extends State<CoverArtView> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.network(
-                  widget.coverUrl,
-                  height: 300,
-                  width: 300,
-                  fit: BoxFit.cover,
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.25),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Image.network(
+                      widget.coverUrl,
+                      height: artSize,
+                      width: artSize,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 32),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.skip_previous),
+                    IconButton.filledTonal(
+                      icon: const Icon(Icons.skip_previous_rounded),
                       onPressed: () => _spotifyService.skipPrevious(),
-                      iconSize: 36,
+                      iconSize: 28,
+                      style: IconButton.styleFrom(
+                        padding: const EdgeInsets.all(12),
+                      ),
                     ),
-                    IconButton(
-                      icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow),
+                    const SizedBox(width: 16),
+                    IconButton.filled(
+                      icon: Icon(
+                        _isPlaying
+                            ? Icons.pause_rounded
+                            : Icons.play_arrow_rounded,
+                      ),
                       onPressed: () async {
                         if (_isPlaying) {
                           await _spotifyService.pause();
@@ -75,12 +108,19 @@ class CoverArtViewState extends State<CoverArtView> {
                         }
                         setState(() => _isPlaying = !_isPlaying);
                       },
-                      iconSize: 48,
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.skip_next),
-                      onPressed: () => _spotifyService.skipNext(),
                       iconSize: 36,
+                      style: IconButton.styleFrom(
+                        padding: const EdgeInsets.all(16),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    IconButton.filledTonal(
+                      icon: const Icon(Icons.skip_next_rounded),
+                      onPressed: () => _spotifyService.skipNext(),
+                      iconSize: 28,
+                      style: IconButton.styleFrom(
+                        padding: const EdgeInsets.all(12),
+                      ),
                     ),
                   ],
                 ),

@@ -186,23 +186,23 @@ class DiscogsCollectionViewState extends State<DiscogsCollectionView> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final bool isButtonDisabled =
         _isLoading || _isSorting || _isLoadingThumbnails;
 
-    return WillPopScope(
-      onWillPop: () async {
-        _cancelCurrentOperation();
-        return true;
+    return PopScope(
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) _cancelCurrentOperation();
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Discogs Collection'),
+          title: const Text('Collection'),
           actions: [
             IconButton(
               icon: Icon(
                 _sortOrder == 'desc'
-                    ? Icons.arrow_downward
-                    : Icons.arrow_upward,
+                    ? Icons.arrow_downward_rounded
+                    : Icons.arrow_upward_rounded,
               ),
               onPressed:
                   isButtonDisabled
@@ -227,20 +227,37 @@ class DiscogsCollectionViewState extends State<DiscogsCollectionView> {
             Expanded(
               child:
                   _isLoading
-                      ? const Center(child: CircularProgressIndicator())
+                      ? Center(
+                        child: CircularProgressIndicator(
+                          color: theme.colorScheme.primary,
+                        ),
+                      )
                       : _error != null
                       ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.error_outline, size: 48),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Error loading collection:\n$_error',
-                              textAlign: TextAlign.center,
+                            Icon(
+                              Icons.error_outline_rounded,
+                              size: 48,
+                              color: theme.colorScheme.error,
                             ),
                             const SizedBox(height: 16),
-                            ElevatedButton(
+                            Text(
+                              'Error loading collection',
+                              style: theme.textTheme.bodyLarge,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _error!,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                                fontSize: 13,
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            FilledButton.tonal(
                               onPressed: _loadReleases,
                               child: const Text('Retry'),
                             ),
@@ -250,10 +267,32 @@ class DiscogsCollectionViewState extends State<DiscogsCollectionView> {
                       : Column(
                         children: [
                           Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Text(
-                              'Total Records: $_totalCount',
-                              style: Theme.of(context).textTheme.headlineSmall,
+                            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                            child: Row(
+                              children: [
+                                Text(
+                                  'Records',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    '$_totalCount',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: theme.colorScheme.primary,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                           Expanded(
@@ -261,23 +300,26 @@ class DiscogsCollectionViewState extends State<DiscogsCollectionView> {
                               children: [
                                 GridView.builder(
                                   controller: _scrollController,
-                                  padding: const EdgeInsets.all(8),
+                                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                                   gridDelegate:
                                       const SliverGridDelegateWithFixedCrossAxisCount(
                                         crossAxisCount: 2,
                                         childAspectRatio: 0.75,
-                                        crossAxisSpacing: 10,
-                                        mainAxisSpacing: 10,
+                                        crossAxisSpacing: 12,
+                                        mainAxisSpacing: 12,
                                       ),
                                   itemCount:
                                       _releases.length +
                                       (_isLoadingMore ? 1 : 0),
                                   itemBuilder: (context, index) {
                                     if (index == _releases.length) {
-                                      return const Center(
+                                      return Center(
                                         child: Padding(
-                                          padding: EdgeInsets.all(16.0),
-                                          child: CircularProgressIndicator(),
+                                          padding: const EdgeInsets.all(16.0),
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: theme.colorScheme.primary,
+                                          ),
                                         ),
                                       );
                                     }
@@ -293,6 +335,7 @@ class DiscogsCollectionViewState extends State<DiscogsCollectionView> {
                                             .isNotEmpty;
 
                                     return Card(
+                                      clipBehavior: Clip.antiAlias,
                                       child: InkWell(
                                         onTap:
                                             hasThumb
@@ -323,33 +366,37 @@ class DiscogsCollectionViewState extends State<DiscogsCollectionView> {
                                                 : null,
                                         child: Column(
                                           crossAxisAlignment:
-                                              CrossAxisAlignment.start,
+                                              CrossAxisAlignment.stretch,
                                           children: [
                                             Expanded(
-                                              child: Center(
-                                                child:
-                                                    hasThumb
-                                                        ? Image.network(
-                                                          basicInfo['thumb'],
-                                                          fit: BoxFit.contain,
-                                                          errorBuilder:
-                                                              (
-                                                                context,
-                                                                error,
-                                                                stackTrace,
-                                                              ) => const Icon(
-                                                                Icons
-                                                                    .broken_image,
-                                                                size: 100,
+                                              child:
+                                                  hasThumb
+                                                      ? Image.network(
+                                                        basicInfo['thumb'],
+                                                        fit: BoxFit.cover,
+                                                        errorBuilder:
+                                                            (
+                                                              context,
+                                                              error,
+                                                              stackTrace,
+                                                            ) => Container(
+                                                              color: theme.colorScheme.surfaceContainerHighest,
+                                                              child: Icon(
+                                                                Icons.broken_image_rounded,
+                                                                size: 48,
+                                                                color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
                                                               ),
-                                                        )
-                                                        : const CircularProgressIndicator(),
-                                              ),
+                                                            ),
+                                                      )
+                                                      : Center(
+                                                        child: CircularProgressIndicator(
+                                                          strokeWidth: 2,
+                                                          color: theme.colorScheme.primary,
+                                                        ),
+                                                      ),
                                             ),
                                             Padding(
-                                              padding: const EdgeInsets.all(
-                                                8.0,
-                                              ),
+                                              padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
                                               child: Column(
                                                 crossAxisAlignment:
                                                     CrossAxisAlignment.start,
@@ -357,20 +404,21 @@ class DiscogsCollectionViewState extends State<DiscogsCollectionView> {
                                                   Text(
                                                     basicInfo['title'],
                                                     style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold,
+                                                      fontWeight: FontWeight.w600,
+                                                      fontSize: 13,
                                                     ),
                                                     maxLines: 2,
                                                     overflow:
                                                         TextOverflow.ellipsis,
                                                   ),
-                                                  const SizedBox(height: 4),
+                                                  const SizedBox(height: 2),
                                                   Text(
                                                     (basicInfo['artists']
                                                             as List)
                                                         .first['name'],
-                                                    style: const TextStyle(
+                                                    style: TextStyle(
                                                       fontSize: 12,
+                                                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                                                     ),
                                                     maxLines: 1,
                                                     overflow:
@@ -391,12 +439,14 @@ class DiscogsCollectionViewState extends State<DiscogsCollectionView> {
                                     left: 0,
                                     right: 0,
                                     child: Container(
-                                      color: Theme.of(context)
-                                          .scaffoldBackgroundColor
-                                          .withOpacity(0.8),
+                                      color: theme.scaffoldBackgroundColor
+                                          .withValues(alpha: 0.8),
                                       padding: const EdgeInsets.all(16.0),
-                                      child: const Center(
-                                        child: CircularProgressIndicator(),
+                                      child: Center(
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: theme.colorScheme.primary,
+                                        ),
                                       ),
                                     ),
                                   ),

@@ -287,8 +287,43 @@ class VinylHomePageState extends State<VinylHomePage> {
         .toList();
   }
 
+  List<Map<String, String>> _buildOwnedAlbumsList() {
+    return ownedData
+        .map(
+          (row) => {
+            'artist': row.length > ownedArtistIndex ? row[ownedArtistIndex] as String : '',
+            'album': row.length > ownedAlbumIndex ? row[ownedAlbumIndex] as String : '',
+            'release': row.length > ownedReleaseIndex ? row[ownedReleaseIndex] as String : '',
+          },
+        )
+        .toList();
+  }
+
+  void _navigateToCoverArt(BuildContext ctx, Map<String, String> entry) async {
+    final coverUrl = await ApiUtils.fetchCoverArt(
+      entry['artist']!,
+      entry['album']!,
+    );
+    if (!ctx.mounted) return;
+    if (coverUrl != null) {
+      Navigator.push(
+        ctx,
+        MaterialPageRoute(
+          builder: (_) => CoverArtView(
+            artist: entry['artist']!,
+            album: entry['album']!,
+            coverUrl: coverUrl,
+            getAnniversaries: getAnniversariesTodayAndTomorrow,
+            ownedAlbums: _buildOwnedAlbumsList(),
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final isFirstArtist =
         selectedArtist != null &&
         artists.isNotEmpty &&
@@ -303,7 +338,7 @@ class VinylHomePageState extends State<VinylHomePage> {
         title: const Text('Spin Tracker'),
         actions: [
           PopupMenuButton<SortOption>(
-            icon: const Icon(Icons.sort),
+            icon: const Icon(Icons.sort_rounded),
             onSelected: (SortOption option) {
               setState(() {
                 currentSortOption = option;
@@ -335,10 +370,11 @@ class VinylHomePageState extends State<VinylHomePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Artist selector
                     Row(
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.arrow_left),
+                          icon: const Icon(Icons.chevron_left_rounded),
                           onPressed:
                               isFirstArtist || isLoading
                                   ? null
@@ -347,8 +383,36 @@ class VinylHomePageState extends State<VinylHomePage> {
                         ),
                         Expanded(
                           child: DropdownSearch<String>(
-                            popupProps: const PopupProps.menu(
+                            popupProps: PopupProps.menu(
                               showSearchBox: true,
+                              searchFieldProps: TextFieldProps(
+                                decoration: InputDecoration(
+                                  hintText: 'Search artists...',
+                                  prefixIcon: const Icon(Icons.search, size: 20),
+                                  filled: true,
+                                  fillColor: theme.colorScheme.surfaceContainerHighest,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                ),
+                              ),
+                              menuProps: MenuProps(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            dropdownDecoratorProps: DropDownDecoratorProps(
+                              dropdownSearchDecoration: InputDecoration(
+                                filled: true,
+                                fillColor: theme.colorScheme.surfaceContainerHighest,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide.none,
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                hintText: 'Select an artist',
+                              ),
                             ),
                             asyncItems: (String filter) async {
                               return artists
@@ -369,187 +433,157 @@ class VinylHomePageState extends State<VinylHomePage> {
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.arrow_right),
+                          icon: const Icon(Icons.chevron_right_rounded),
                           onPressed:
                               isLastArtist || isLoading ? null : _nextArtist,
                           tooltip: 'Next Artist',
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
+
+                    // Owned Albums section
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Owned Albums:',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                        Text(
+                          'Owned Albums',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                        Text(
-                          'Total: ${ownedData.length}',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey,
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '${ownedData.length}',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: theme.colorScheme.primary,
+                            ),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 8),
                     if (ownedAlbums.isEmpty)
-                      const Text('No owned albums for this artist.')
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12.0),
+                        child: Text(
+                          selectedArtist == null
+                              ? 'Select an artist to see albums'
+                              : 'No owned albums for this artist.',
+                          style: TextStyle(
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      )
                     else
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children:
-                            ownedAlbums
-                                .map(
-                                  (entry) => Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 4.0,
-                                    ),
-                                    child: GestureDetector(
-                                      onTap: () async {
-                                        final ctx = context;
-                                        final coverUrl =
-                                            await ApiUtils.fetchCoverArt(
-                                              entry['artist']!,
-                                              entry['album']!,
-                                            );
-                                        if (!ctx.mounted) return;
-                                        if (coverUrl != null) {
-                                          Navigator.push(
-                                            ctx,
-                                            MaterialPageRoute(
-                                              builder:
-                                                  (_) => CoverArtView(
-                                                    artist: entry['artist']!,
-                                                    album: entry['album']!,
-                                                    coverUrl: coverUrl,
-                                                    getAnniversaries:
-                                                        getAnniversariesTodayAndTomorrow,
-                                                    ownedAlbums:
-                                                        ownedData
-                                                            .map(
-                                                              (row) => {
-                                                                'artist':
-                                                                    row[ownedArtistIndex]
-                                                                        as String,
-                                                                'album':
-                                                                    row[ownedAlbumIndex]
-                                                                        as String,
-                                                                'release':
-                                                                    row[ownedReleaseIndex]
-                                                                        as String,
-                                                              },
-                                                            )
-                                                            .toList(),
-                                                  ),
-                                            ),
-                                          );
-                                        }
-                                      },
-                                      child: Text(
-                                        '${entry['album']} (${entry['release'] ?? 'N/A'})',
-                                      ),
-                                    ),
+                      Card(
+                        child: Column(
+                          children: [
+                            for (int i = 0; i < ownedAlbums.length; i++) ...[
+                              ListTile(
+                                title: Text(
+                                  ownedAlbums[i]['album']!,
+                                  style: const TextStyle(fontSize: 15),
+                                ),
+                                subtitle: Text(
+                                  ownedAlbums[i]['release'] ?? 'N/A',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                                   ),
-                                )
-                                .toList(),
+                                ),
+                                trailing: Icon(
+                                  Icons.chevron_right_rounded,
+                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                                ),
+                                onTap: () => _navigateToCoverArt(context, ownedAlbums[i]),
+                              ),
+                              if (i < ownedAlbums.length - 1)
+                                Divider(
+                                  height: 1,
+                                  indent: 16,
+                                  endIndent: 16,
+                                  color: theme.dividerTheme.color,
+                                ),
+                            ],
+                          ],
+                        ),
                       ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 24),
+
+                    // Wanted Albums section
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Wanted Albums:',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                        Text(
+                          'Wanted Albums',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                        Text(
-                          'Total Unique: ${_getUniqueWantedAlbumsCount()}',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey,
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.secondary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '${_getUniqueWantedAlbumsCount()}',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: theme.colorScheme.secondary,
+                            ),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 8),
                     if (wantedAlbums.isEmpty)
-                      const Text('No wanted albums for this artist.')
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12.0),
+                        child: Text(
+                          selectedArtist == null
+                              ? 'Select an artist to see albums'
+                              : 'No wanted albums for this artist.',
+                          style: TextStyle(
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      )
                     else
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children:
-                            wantedAlbums
-                                .map(
-                                  (entry) => Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 4.0,
-                                    ),
-                                    child: GestureDetector(
-                                      onTap: () async {
-                                        final ctx = context;
-                                        final coverUrl =
-                                            await ApiUtils.fetchCoverArt(
-                                              entry['artist']!,
-                                              entry['album']!,
-                                            );
-                                        if (!ctx.mounted) return;
-                                        if (coverUrl != null) {
-                                          Navigator.push(
-                                            ctx,
-                                            MaterialPageRoute(
-                                              builder:
-                                                  (_) => CoverArtView(
-                                                    artist: entry['artist']!,
-                                                    album: entry['album']!,
-                                                    coverUrl: coverUrl,
-                                                    getAnniversaries:
-                                                        getAnniversariesTodayAndTomorrow,
-                                                    ownedAlbums:
-                                                        ownedData
-                                                            .map(
-                                                              (row) => {
-                                                                'artist':
-                                                                    row[ownedArtistIndex]
-                                                                        as String,
-                                                                'album':
-                                                                    row[ownedAlbumIndex]
-                                                                        as String,
-                                                                'release':
-                                                                    row[ownedReleaseIndex]
-                                                                        as String,
-                                                              },
-                                                            )
-                                                            .toList(),
-                                                  ),
-                                            ),
-                                          );
-                                        }
-                                      },
-                                      child: Row(
-                                        children: [
-                                          Expanded(
-                                            child: Text(entry['album']!),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            'List: ${entry['columnA'] ?? 'N/A'}, Rank: ${entry['columnC'] ?? 'N/A'}',
-                                            style: const TextStyle(
-                                              color: Colors.grey,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                )
-                                .toList(),
+                      Card(
+                        child: Column(
+                          children: [
+                            for (int i = 0; i < wantedAlbums.length; i++) ...[
+                              ListTile(
+                                title: Text(
+                                  wantedAlbums[i]['album']!,
+                                  style: const TextStyle(fontSize: 15),
+                                ),
+                                trailing: Icon(
+                                  Icons.chevron_right_rounded,
+                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                                ),
+                                onTap: () => _navigateToCoverArt(context, wantedAlbums[i]),
+                              ),
+                              if (i < wantedAlbums.length - 1)
+                                Divider(
+                                  height: 1,
+                                  indent: 16,
+                                  endIndent: 16,
+                                  color: theme.dividerTheme.color,
+                                ),
+                            ],
+                          ],
+                        ),
                       ),
                   ],
                 ),
@@ -559,16 +593,7 @@ class VinylHomePageState extends State<VinylHomePage> {
           BottomNav(
             isOnSearchView: true,
             getAnniversaries: getAnniversariesTodayAndTomorrow,
-            ownedAlbums:
-                ownedData
-                    .map(
-                      (row) => {
-                        'artist': row[ownedArtistIndex] as String,
-                        'album': row[ownedAlbumIndex] as String,
-                        'release': row[ownedReleaseIndex] as String,
-                      },
-                    )
-                    .toList(),
+            ownedAlbums: _buildOwnedAlbumsList(),
           ),
         ],
       ),
