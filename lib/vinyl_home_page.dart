@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:googleapis/sheets/v4.dart' show SheetsApi;
-import 'dart:convert';
 import 'package:dropdown_search/dropdown_search.dart';
-import 'package:googleapis_auth/auth_io.dart' as auth;
-import 'package:spin_tracker/config.dart';
 import 'package:logging/logging.dart';
 import 'cover_art_view.dart';
 import 'api_utils.dart';
 import 'components/bottom_nav.dart';
+import 'services/database_service.dart';
+import 'services/sheets_import_service.dart';
 
 final _logger = Logger('VinylHomePage');
 
@@ -23,6 +21,11 @@ class VinylHomePage extends StatefulWidget {
 }
 
 class VinylHomePageState extends State<VinylHomePage> {
+  final DatabaseService _dbService = DatabaseService();
+
+  List<Map<String, String>> _allOwnedAlbums = [];
+  List<Map<String, String>> _allWantedAlbums = [];
+
   List<String> ownedArtists = [];
   List<String> wantedArtists = [];
 
@@ -31,15 +34,6 @@ class VinylHomePageState extends State<VinylHomePage> {
   List<Map<String, String>> ownedAlbums = [];
   List<Map<String, String>> wantedAlbums = [];
   String? selectedArtist;
-  late SheetsApi sheetsApi;
-  int ownedArtistIndex = -1;
-  int ownedAlbumIndex = -1;
-  int ownedReleaseIndex = -1;
-  int wantedArtistIndex = -1;
-  int wantedAlbumIndex = -1;
-  int wantedCheckIndex = -1;
-  List<List<dynamic>> ownedData = [];
-  List<List<dynamic>> wantedData = [];
   bool isLoading = true;
   SortOption currentSortOption = SortOption.dateAdded;
   ArtistFilter artistFilter = ArtistFilter.owned;
@@ -53,8 +47,11 @@ class VinylHomePageState extends State<VinylHomePage> {
   Future<void> _loadData() async {
     setState(() => isLoading = true);
     try {
-      await _initializeSheetsApi();
-      await _fetchData();
+      final hasData = await _dbService.hasData();
+      if (!hasData) {
+        await _importFromSheets();
+      }
+      await _loadFromDatabase();
     } catch (e) {
       _logger.severe('Error loading data: $e');
     } finally {
@@ -62,93 +59,42 @@ class VinylHomePageState extends State<VinylHomePage> {
     }
   }
 
-  Future<void> _initializeSheetsApi() async {
-    final credentials = await DefaultAssetBundle.of(
-      context,
-    ).loadString('assets/vinylcollection-451818-1e41b0728e29.json');
-    final authClient = await auth.clientViaServiceAccount(
-      auth.ServiceAccountCredentials.fromJson(jsonDecode(credentials)),
-      ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-    );
-    sheetsApi = SheetsApi(authClient);
-    _logger.info('Sheets API initialized successfully');
+  Future<void> _importFromSheets() async {
+    _logger.info('Importing from Google Sheets...');
+    final data = await SheetsImportService.importFromSheets();
+    await _dbService.importOwnedAlbums(data.owned);
+    await _dbService.importWantedAlbums(data.wanted);
+    _logger.info('Import complete');
   }
 
-  Future<void> _fetchData() async {
-    final ownedHeaders = await sheetsApi.spreadsheets.values.get(
-      spreadsheetId,
-      'Owned!A1:Z1',
-    );
-    final wantedHeaders = await sheetsApi.spreadsheets.values.get(
-      spreadsheetId,
-      'Wanted!A1:Z1',
-    );
-
-    final ownedHeaderList = ownedHeaders.values?.first ?? [];
-    final wantedHeaderList = wantedHeaders.values?.first ?? [];
-
-    ownedArtistIndex = ownedHeaderList.indexOf('Artist');
-    ownedAlbumIndex = ownedHeaderList.indexOf('Album');
-    ownedReleaseIndex = ownedHeaderList.indexOf('Release');
-    wantedArtistIndex = wantedHeaderList.indexOf('Artist');
-    wantedAlbumIndex = wantedHeaderList.indexOf('Album');
-    wantedCheckIndex = wantedHeaderList.indexOf('Check');
-
-    if (ownedArtistIndex == -1 ||
-        ownedAlbumIndex == -1 ||
-        ownedReleaseIndex == -1) {
-      _logger.warning(
-        'Error: "Artist", "Album", or "Release" not found in Owned headers: $ownedHeaderList',
-      );
-      return;
+  Future<void> _reimportFromSheets() async {
+    setState(() => isLoading = true);
+    try {
+      await _dbService.clearAll();
+      await _importFromSheets();
+      await _loadFromDatabase();
+    } catch (e) {
+      _logger.severe('Error reimporting: $e');
+    } finally {
+      setState(() => isLoading = false);
     }
-    if (wantedArtistIndex == -1 ||
-        wantedAlbumIndex == -1 ||
-        wantedCheckIndex == -1) {
-      _logger.warning(
-        'Error: "Artist", "Album", or "Check" not found in Wanted headers: $wantedHeaderList',
-      );
-      return;
-    }
+  }
 
-    final ownedResponse = await sheetsApi.spreadsheets.values.get(
-      spreadsheetId,
-      'Owned!A2:Z',
-    );
-    final wantedResponse = await sheetsApi.spreadsheets.values.get(
-      spreadsheetId,
-      'Wanted!A2:Z',
-    );
-
-    ownedData = ownedResponse.values ?? [];
-    wantedData = wantedResponse.values ?? [];
+  Future<void> _loadFromDatabase() async {
+    _allOwnedAlbums = await _dbService.getAllOwnedAlbums();
+    _allWantedAlbums = await _dbService.getAllWantedAlbums();
 
     setState(() {
       ownedArtists =
-          ownedData
-              .map(
-                (row) =>
-                    row.length > ownedArtistIndex
-                        ? (row[ownedArtistIndex] as String).toLowerCase()
-                        : '',
-              )
+          _allOwnedAlbums
+              .map((a) => a['artist']!.toLowerCase())
               .where((s) => s.isNotEmpty)
               .toSet()
               .toList()
             ..sort();
       wantedArtists =
-          wantedData
-              .where(
-                (row) =>
-                    row.length > wantedCheckIndex &&
-                    (row[wantedCheckIndex] as String).toLowerCase() == 'no',
-              )
-              .map(
-                (row) =>
-                    row.length > wantedArtistIndex
-                        ? (row[wantedArtistIndex] as String).toLowerCase()
-                        : '',
-              )
+          _allWantedAlbums
+              .map((a) => a['artist']!.toLowerCase())
               .where((s) => s.isNotEmpty)
               .toSet()
               .toList()
@@ -172,56 +118,19 @@ class VinylHomePageState extends State<VinylHomePage> {
 
   void getWantedAlbums(String lowercaseArtist) {
     wantedAlbums =
-        wantedData
-            .where(
-              (row) =>
-                  row.length > wantedCheckIndex &&
-                  row.length > wantedArtistIndex &&
-                  (row[wantedArtistIndex] as String).toLowerCase() ==
-                      lowercaseArtist &&
-                  (row[wantedCheckIndex] as String).toLowerCase() == 'no',
-            )
-            .map(
-              (row) => {
-                'artist': row[wantedArtistIndex] as String,
-                'album':
-                    row.length > wantedAlbumIndex
-                        ? row[wantedAlbumIndex] as String
-                        : '',
-                // 'columnA': row.isNotEmpty ? row[0] as String : '',
-                // 'columnC': row.length > 2 ? row[2] as String : '',
-              },
-            )
-            .where((entry) => entry['album']!.isNotEmpty)
+        _allWantedAlbums
+            .where((a) => a['artist']!.toLowerCase() == lowercaseArtist)
+            .where((a) => a['album']!.isNotEmpty)
             .toList();
   }
 
   void getOwnedAlbums(String lowercaseArtist) {
     var albums =
-        ownedData
-            .where(
-              (row) =>
-                  row.length > ownedArtistIndex &&
-                  (row[ownedArtistIndex] as String).toLowerCase() ==
-                      lowercaseArtist,
-            )
-            .map(
-              (row) => {
-                'artist': row[ownedArtistIndex] as String,
-                'album':
-                    row.length > ownedAlbumIndex
-                        ? row[ownedAlbumIndex] as String
-                        : '',
-                'release':
-                    row.length > ownedReleaseIndex
-                        ? row[ownedReleaseIndex] as String
-                        : '',
-              },
-            )
-            .where((entry) => entry['album']!.isNotEmpty)
+        _allOwnedAlbums
+            .where((a) => a['artist']!.toLowerCase() == lowercaseArtist)
+            .where((a) => a['album']!.isNotEmpty)
             .toList();
 
-    // Apply sorting based on current option
     if (currentSortOption == SortOption.dateAdded) {
       albums.sort((a, b) => a['release']!.compareTo(b['release']!));
     } else {
@@ -261,21 +170,6 @@ class VinylHomePageState extends State<VinylHomePage> {
     }
   }
 
-  int _getUniqueWantedAlbumsCount() {
-    final uniqueAlbums = <String>{};
-    for (var row in wantedData) {
-      if (row.length > wantedArtistIndex &&
-          row.length > wantedAlbumIndex &&
-          row.length > wantedCheckIndex &&
-          (row[wantedCheckIndex] as String).toLowerCase() == 'no') {
-        final artist = (row[wantedArtistIndex] as String).toLowerCase();
-        final album = (row[wantedAlbumIndex] as String).toLowerCase();
-        uniqueAlbums.add('$artist|$album');
-      }
-    }
-    return uniqueAlbums.length;
-  }
-
   List<Map<String, String>> getAnniversariesTodayAndTomorrow() {
     final today = DateTime.now();
     final tomorrow = today.add(const Duration(days: 1));
@@ -284,36 +178,23 @@ class VinylHomePageState extends State<VinylHomePage> {
     final tomorrowMonthDay =
         '${tomorrow.month.toString().padLeft(2, '0')}-${tomorrow.day.toString().padLeft(2, '0')}';
 
-    return ownedData
-        .where((row) {
-          if (row.length <= ownedReleaseIndex) return false;
-          final release = row[ownedReleaseIndex] as String;
+    return _allOwnedAlbums
+        .where((a) {
+          final release = a['release'] ?? '';
           if (release.length < 5) return false;
           final releaseMonthDay = release.substring(5);
           return releaseMonthDay == todayMonthDay ||
               releaseMonthDay == tomorrowMonthDay;
         })
         .map(
-          (row) => {
-            'artist': row[ownedArtistIndex] as String,
-            'album': row[ownedAlbumIndex] as String,
-            'release': row[ownedReleaseIndex] as String,
+          (a) => {
+            'artist': a['artist']!,
+            'album': a['album']!,
+            'release': a['release']!,
             'isToday':
-                (row[ownedReleaseIndex] as String).substring(5) == todayMonthDay
+                a['release']!.substring(5) == todayMonthDay
                     ? 'Today'
                     : 'Tomorrow',
-          },
-        )
-        .toList();
-  }
-
-  List<Map<String, String>> _buildOwnedAlbumsList() {
-    return ownedData
-        .map(
-          (row) => {
-            'artist': row.length > ownedArtistIndex ? row[ownedArtistIndex] as String : '',
-            'album': row.length > ownedAlbumIndex ? row[ownedAlbumIndex] as String : '',
-            'release': row.length > ownedReleaseIndex ? row[ownedReleaseIndex] as String : '',
           },
         )
         .toList();
@@ -334,7 +215,7 @@ class VinylHomePageState extends State<VinylHomePage> {
             album: entry['album']!,
             coverUrl: coverUrl,
             getAnniversaries: getAnniversariesTodayAndTomorrow,
-            ownedAlbums: _buildOwnedAlbumsList(),
+            ownedAlbums: _allOwnedAlbums,
           ),
         ),
       );
@@ -359,8 +240,8 @@ class VinylHomePageState extends State<VinylHomePage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
-            onPressed: isLoading ? null : _loadData,
-            tooltip: 'Refresh',
+            onPressed: isLoading ? null : _reimportFromSheets,
+            tooltip: 'Reimport from Sheets',
           ),
           PopupMenuButton<SortOption>(
             icon: const Icon(Icons.sort_rounded),
@@ -514,7 +395,7 @@ class VinylHomePageState extends State<VinylHomePage> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            '${ownedData.length}',
+                            '${_allOwnedAlbums.length}',
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
@@ -590,7 +471,7 @@ class VinylHomePageState extends State<VinylHomePage> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            '${_getUniqueWantedAlbumsCount()}',
+                            '${_allWantedAlbums.length}',
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
@@ -648,7 +529,7 @@ class VinylHomePageState extends State<VinylHomePage> {
           BottomNav(
             isOnSearchView: true,
             getAnniversaries: getAnniversariesTodayAndTomorrow,
-            ownedAlbums: _buildOwnedAlbumsList(),
+            ownedAlbums: _allOwnedAlbums,
           ),
         ],
       ),

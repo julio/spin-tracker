@@ -42,6 +42,12 @@ dependencies:
   googleapis_auth: ^1.6.0 # For authentication
   logging: ^1.2.0  # For structured logging
 
+  # Local database
+  sqflite: ^2.4.1
+  sqflite_common_ffi: ^2.3.4
+  path_provider: ^2.1.5
+  path: ^1.9.1
+
   # Spotify integration
   spotify_sdk: ^2.3.1
   spotify: ^0.13.7  # Using latest compatible version
