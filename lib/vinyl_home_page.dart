@@ -13,6 +13,8 @@ final _logger = Logger('VinylHomePage');
 
 enum SortOption { dateAdded, artistAlbum }
 
+enum ArtistFilter { owned, wanted }
+
 class VinylHomePage extends StatefulWidget {
   const VinylHomePage({super.key});
 
@@ -21,7 +23,11 @@ class VinylHomePage extends StatefulWidget {
 }
 
 class VinylHomePageState extends State<VinylHomePage> {
-  List<String> artists = [];
+  List<String> ownedArtists = [];
+  List<String> wantedArtists = [];
+
+  List<String> get artists =>
+      artistFilter == ArtistFilter.owned ? ownedArtists : wantedArtists;
   List<Map<String, String>> ownedAlbums = [];
   List<Map<String, String>> wantedAlbums = [];
   String? selectedArtist;
@@ -36,6 +42,7 @@ class VinylHomePageState extends State<VinylHomePage> {
   List<List<dynamic>> wantedData = [];
   bool isLoading = true;
   SortOption currentSortOption = SortOption.dateAdded;
+  ArtistFilter artistFilter = ArtistFilter.owned;
 
   @override
   void initState() {
@@ -117,21 +124,34 @@ class VinylHomePageState extends State<VinylHomePage> {
     wantedData = wantedResponse.values ?? [];
 
     setState(() {
-      artists =
-          {
-              ...(ownedData.map(
+      ownedArtists =
+          ownedData
+              .map(
                 (row) =>
                     row.length > ownedArtistIndex
                         ? (row[ownedArtistIndex] as String).toLowerCase()
                         : '',
-              )),
-              ...(wantedData.map(
+              )
+              .where((s) => s.isNotEmpty)
+              .toSet()
+              .toList()
+            ..sort();
+      wantedArtists =
+          wantedData
+              .where(
+                (row) =>
+                    row.length > wantedCheckIndex &&
+                    (row[wantedCheckIndex] as String).toLowerCase() == 'no',
+              )
+              .map(
                 (row) =>
                     row.length > wantedArtistIndex
                         ? (row[wantedArtistIndex] as String).toLowerCase()
                         : '',
-              )),
-            }.where((s) => s.isNotEmpty).toList()
+              )
+              .where((s) => s.isNotEmpty)
+              .toSet()
+              .toList()
             ..sort();
       _updateAlbums();
     });
@@ -337,6 +357,11 @@ class VinylHomePageState extends State<VinylHomePage> {
       appBar: AppBar(
         title: const Text('Spin Tracker'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: isLoading ? null : _loadData,
+            tooltip: 'Refresh',
+          ),
           PopupMenuButton<SortOption>(
             icon: const Icon(Icons.sort_rounded),
             onSelected: (SortOption option) {
@@ -370,6 +395,36 @@ class VinylHomePageState extends State<VinylHomePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Artist filter toggle
+                    Center(
+                      child: SegmentedButton<ArtistFilter>(
+                        segments: const [
+                          ButtonSegment(
+                            value: ArtistFilter.owned,
+                            label: Text('Owned'),
+                            icon: Icon(Icons.library_music_rounded, size: 18),
+                          ),
+                          ButtonSegment(
+                            value: ArtistFilter.wanted,
+                            label: Text('Wanted'),
+                            icon: Icon(Icons.favorite_rounded, size: 18),
+                          ),
+                        ],
+                        selected: {artistFilter},
+                        onSelectionChanged: (selection) {
+                          setState(() {
+                            artistFilter = selection.first;
+                            selectedArtist = null;
+                            _updateAlbums();
+                          });
+                        },
+                        style: ButtonStyle(
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
                     // Artist selector
                     Row(
                       children: [
