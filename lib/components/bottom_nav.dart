@@ -43,7 +43,9 @@ class BottomNav extends StatelessWidget {
                   icon: Icons.search_rounded,
                   label: 'Search',
                   isSelected: isOnSearchView,
-                  onTap: isOnSearchView ? null : () => Navigator.pop(context),
+                  onTap: isOnSearchView
+                      ? null
+                      : () => Navigator.popUntil(context, (route) => route.isFirst),
                   theme: theme,
                 ),
               ),
@@ -54,7 +56,9 @@ class BottomNav extends StatelessWidget {
                   isSelected: false,
                   onTap: onRandomTap ??
                       (ownedAlbums != null && getAnniversaries != null
-                          ? () => Navigator.push(
+                          ? () {
+                              Navigator.popUntil(context, (route) => route.isFirst);
+                              Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) => RandomAlbumView(
@@ -62,7 +66,8 @@ class BottomNav extends StatelessWidget {
                                     getAnniversaries: getAnniversaries!,
                                   ),
                                 ),
-                              )
+                              );
+                            }
                           : null),
                   theme: theme,
                 ),
@@ -73,7 +78,9 @@ class BottomNav extends StatelessWidget {
                   label: 'Collection',
                   isSelected: false,
                   onTap: ownedAlbums != null && getAnniversaries != null
-                      ? () => Navigator.push(
+                      ? () {
+                          Navigator.popUntil(context, (route) => route.isFirst);
+                          Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (_) => DiscogsCollectionView(
@@ -81,7 +88,8 @@ class BottomNav extends StatelessWidget {
                                 getAnniversaries: getAnniversaries!,
                               ),
                             ),
-                          )
+                          );
+                        }
                       : null,
                   theme: theme,
                 ),
@@ -92,7 +100,9 @@ class BottomNav extends StatelessWidget {
                   label: 'Anniversaries',
                   isSelected: false,
                   onTap: getAnniversaries != null && ownedAlbums != null
-                      ? () => Navigator.push(
+                      ? () {
+                          Navigator.popUntil(context, (route) => route.isFirst);
+                          Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (_) => AnniversariesView(
@@ -101,7 +111,8 @@ class BottomNav extends StatelessWidget {
                                 getAnniversaries: getAnniversaries!,
                               ),
                             ),
-                          )
+                          );
+                        }
                       : null,
                   theme: theme,
                 ),
