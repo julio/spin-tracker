@@ -103,6 +103,44 @@ class DatabaseService {
     });
   }
 
+  Future<void> addOwnedAlbum({
+    required String artist,
+    required String album,
+    required String releaseDate,
+  }) async {
+    final db = await database;
+    await db.insert('owned_albums', {
+      'artist': artist,
+      'album': album,
+      'release_date': releaseDate,
+    });
+  }
+
+  Future<void> deleteOwnedAlbum({
+    required String artist,
+    required String album,
+    required String releaseDate,
+  }) async {
+    final db = await database;
+    await db.delete(
+      'owned_albums',
+      where: 'artist = ? AND album = ? AND release_date = ?',
+      whereArgs: [artist, album, releaseDate],
+    );
+  }
+
+  Future<void> deleteWantedAlbum({
+    required String artist,
+    required String album,
+  }) async {
+    final db = await database;
+    await db.delete(
+      'wanted_albums',
+      where: 'artist = ? AND album = ?',
+      whereArgs: [artist, album],
+    );
+  }
+
   Future<void> clearAll() async {
     final db = await database;
     await db.delete('owned_albums');

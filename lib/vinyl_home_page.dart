@@ -6,6 +6,7 @@ import 'api_utils.dart';
 import 'components/bottom_nav.dart';
 import 'services/database_service.dart';
 import 'services/sheets_import_service.dart';
+import 'add_record_view.dart';
 
 final _logger = Logger('VinylHomePage');
 
@@ -222,6 +223,57 @@ class VinylHomePageState extends State<VinylHomePage> {
     }
   }
 
+  Future<void> _confirmDeleteOwned(BuildContext ctx, Map<String, String> album) async {
+    final confirmed = await showDialog<bool>(
+      context: ctx,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Record'),
+        content: Text('Delete "${album['album']}" by ${album['artist']}?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await _dbService.deleteOwnedAlbum(
+        artist: album['artist']!,
+        album: album['album']!,
+        releaseDate: album['release'] ?? '',
+      );
+      await _loadFromDatabase();
+    }
+  }
+
+  Future<void> _confirmDeleteWanted(BuildContext ctx, Map<String, String> album) async {
+    final confirmed = await showDialog<bool>(
+      context: ctx,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Record'),
+        content: Text('Delete "${album['album']}" by ${album['artist']}?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await _dbService.deleteWantedAlbum(
+        artist: album['artist']!,
+        album: album['album']!,
+      );
+      await _loadFromDatabase();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -238,6 +290,19 @@ class VinylHomePageState extends State<VinylHomePage> {
       appBar: AppBar(
         title: const Text('Spin Tracker'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.add_rounded),
+            onPressed: isLoading ? null : () async {
+              final added = await Navigator.push<bool>(
+                context,
+                MaterialPageRoute(builder: (_) => const AddRecordView()),
+              );
+              if (added == true) {
+                await _loadFromDatabase();
+              }
+            },
+            tooltip: 'Add Record',
+          ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
             onPressed: isLoading ? null : _reimportFromSheets,
@@ -440,6 +505,7 @@ class VinylHomePageState extends State<VinylHomePage> {
                                   color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
                                 ),
                                 onTap: () => _navigateToCoverArt(context, ownedAlbums[i]),
+                                onLongPress: () => _confirmDeleteOwned(context, ownedAlbums[i]),
                               ),
                               if (i < ownedAlbums.length - 1)
                                 Divider(
@@ -509,6 +575,7 @@ class VinylHomePageState extends State<VinylHomePage> {
                                   color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
                                 ),
                                 onTap: () => _navigateToCoverArt(context, wantedAlbums[i]),
+                                onLongPress: () => _confirmDeleteWanted(context, wantedAlbums[i]),
                               ),
                               if (i < wantedAlbums.length - 1)
                                 Divider(
