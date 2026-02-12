@@ -12,7 +12,7 @@ import 'discogs_search_sheet.dart';
 
 final _logger = Logger('VinylHomePage');
 
-enum SortOption { dateAdded, artistAlbum }
+enum SortOption { releaseDate, artistAlbum }
 
 enum ArtistFilter { owned, wanted }
 
@@ -38,7 +38,7 @@ class VinylHomePageState extends State<VinylHomePage> {
   List<Map<String, String>> wantedAlbums = [];
   String? selectedArtist;
   bool isLoading = true;
-  SortOption currentSortOption = SortOption.dateAdded;
+  SortOption currentSortOption = SortOption.releaseDate;
   ArtistFilter artistFilter = ArtistFilter.owned;
 
   @override
@@ -134,7 +134,7 @@ class VinylHomePageState extends State<VinylHomePage> {
             .where((a) => a['album']!.isNotEmpty)
             .toList();
 
-    if (currentSortOption == SortOption.dateAdded) {
+    if (currentSortOption == SortOption.releaseDate) {
       albums.sort((a, b) => a['release']!.compareTo(b['release']!));
     } else {
       albums.sort((a, b) {
@@ -388,8 +388,8 @@ class VinylHomePageState extends State<VinylHomePage> {
             itemBuilder:
                 (BuildContext context) => [
                   const PopupMenuItem(
-                    value: SortOption.dateAdded,
-                    child: Text('Sort by Date Added'),
+                    value: SortOption.releaseDate,
+                    child: Text('Sort by Release Date'),
                   ),
                   const PopupMenuItem(
                     value: SortOption.artistAlbum,
