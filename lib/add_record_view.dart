@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'services/database_service.dart';
+import 'discogs_search_sheet.dart';
 
 class AddRecordView extends StatefulWidget {
   const AddRecordView({super.key});
@@ -49,7 +50,8 @@ class AddRecordViewState extends State<AddRecordView> {
         releaseDate: _releaseDate != null ? _formatDate(_releaseDate!) : '',
       );
       if (!mounted) return;
-      Navigator.pop(context, true);
+      setState(() => _isSaving = false);
+      _showDiscogsSheet();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -57,6 +59,17 @@ class AddRecordViewState extends State<AddRecordView> {
       );
       setState(() => _isSaving = false);
     }
+  }
+
+  void _showDiscogsSheet() {
+    showDiscogsSearchSheet(
+      context,
+      artist: _artistController.text.trim(),
+      album: _albumController.text.trim(),
+      releaseDate: _releaseDate != null ? _formatDate(_releaseDate!) : '',
+    ).then((_) {
+      if (mounted) Navigator.pop(context, true);
+    });
   }
 
   @override

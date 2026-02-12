@@ -30,14 +30,16 @@ class DatabaseService {
 
     return sqflite.openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE owned_albums (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             artist TEXT NOT NULL,
             album TEXT NOT NULL,
-            release_date TEXT NOT NULL DEFAULT ''
+            release_date TEXT NOT NULL DEFAULT '',
+            discogs_id INTEGER,
+            discogs_instance_id INTEGER
           )
         ''');
         await db.execute('''
@@ -49,6 +51,12 @@ class DatabaseService {
         ''');
         await db.execute('CREATE INDEX idx_owned_artist ON owned_albums(artist)');
         await db.execute('CREATE INDEX idx_wanted_artist ON wanted_albums(artist)');
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute('ALTER TABLE owned_albums ADD COLUMN discogs_id INTEGER');
+          await db.execute('ALTER TABLE owned_albums ADD COLUMN discogs_instance_id INTEGER');
+        }
       },
     );
   }
@@ -66,6 +74,8 @@ class DatabaseService {
       'artist': row['artist'] as String,
       'album': row['album'] as String,
       'release': row['release_date'] as String,
+      'discogs_id': row['discogs_id']?.toString() ?? '',
+      'discogs_instance_id': row['discogs_instance_id']?.toString() ?? '',
     }).toList();
   }
 
@@ -107,13 +117,33 @@ class DatabaseService {
     required String artist,
     required String album,
     required String releaseDate,
+    int? discogsId,
+    int? discogsInstanceId,
   }) async {
     final db = await database;
     await db.insert('owned_albums', {
       'artist': artist,
       'album': album,
       'release_date': releaseDate,
+      if (discogsId != null) 'discogs_id': discogsId,
+      if (discogsInstanceId != null) 'discogs_instance_id': discogsInstanceId,
     });
+  }
+
+  Future<void> updateDiscogsId({
+    required String artist,
+    required String album,
+    required String releaseDate,
+    required int discogsId,
+    required int discogsInstanceId,
+  }) async {
+    final db = await database;
+    await db.update(
+      'owned_albums',
+      {'discogs_id': discogsId, 'discogs_instance_id': discogsInstanceId},
+      where: 'artist = ? AND album = ? AND release_date = ?',
+      whereArgs: [artist, album, releaseDate],
+    );
   }
 
   Future<void> deleteOwnedAlbum({

@@ -5,8 +5,10 @@ import 'cover_art_view.dart';
 import 'api_utils.dart';
 import 'components/bottom_nav.dart';
 import 'services/database_service.dart';
+import 'services/discogs_service.dart';
 import 'services/sheets_import_service.dart';
 import 'add_record_view.dart';
+import 'discogs_search_sheet.dart';
 
 final _logger = Logger('VinylHomePage');
 
@@ -223,23 +225,88 @@ class VinylHomePageState extends State<VinylHomePage> {
     }
   }
 
-  Future<void> _confirmDeleteOwned(BuildContext ctx, Map<String, String> album) async {
-    final confirmed = await showDialog<bool>(
+  bool _hasDiscogsId(Map<String, String> album) {
+    final id = album['discogs_id'] ?? '';
+    return id.isNotEmpty && id != 'null';
+  }
+
+  Future<void> _showOwnedAlbumActions(BuildContext ctx, Map<String, String> album) async {
+    final hasDiscogs = _hasDiscogsId(album);
+
+    final action = await showModalBottomSheet<String>(
       context: ctx,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Record'),
-        content: Text('Delete "${album['album']}" by ${album['artist']}?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
-            child: const Text('Delete'),
-          ),
-        ],
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
+      builder: (context) {
+        final theme = Theme.of(context);
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Text(
+                  '${album['album']}',
+                  style: theme.textTheme.titleMedium,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const Divider(height: 1),
+              if (!hasDiscogs)
+                ListTile(
+                  leading: const Icon(Icons.add_circle_outline),
+                  title: const Text('Add to Discogs'),
+                  onTap: () => Navigator.pop(context, 'add_discogs'),
+                ),
+              ListTile(
+                leading: Icon(Icons.delete_outline,
+                    color: theme.colorScheme.error),
+                title: Text(
+                  hasDiscogs ? 'Delete from app only' : 'Delete',
+                  style: TextStyle(color: theme.colorScheme.error),
+                ),
+                onTap: () => Navigator.pop(context, 'delete_app'),
+              ),
+              if (hasDiscogs)
+                ListTile(
+                  leading: Icon(Icons.delete_forever,
+                      color: theme.colorScheme.error),
+                  title: Text(
+                    'Delete from app and Discogs',
+                    style: TextStyle(color: theme.colorScheme.error),
+                  ),
+                  onTap: () => Navigator.pop(context, 'delete_both'),
+                ),
+            ],
+          ),
+        );
+      },
     );
-    if (confirmed == true) {
+
+    if (action == null || !ctx.mounted) return;
+
+    if (action == 'add_discogs') {
+      final added = await showDiscogsSearchSheet(
+        ctx,
+        artist: album['artist']!,
+        album: album['album']!,
+        releaseDate: album['release'] ?? '',
+      );
+      if (added == true) await _loadFromDatabase();
+    } else if (action == 'delete_app') {
+      await _dbService.deleteOwnedAlbum(
+        artist: album['artist']!,
+        album: album['album']!,
+        releaseDate: album['release'] ?? '',
+      );
+      await _loadFromDatabase();
+    } else if (action == 'delete_both') {
+      final discogsId = int.tryParse(album['discogs_id'] ?? '');
+      final instanceId = int.tryParse(album['discogs_instance_id'] ?? '');
+      if (discogsId != null && instanceId != null) {
+        await DiscogsService().removeFromCollection(discogsId, instanceId);
+      }
       await _dbService.deleteOwnedAlbum(
         artist: album['artist']!,
         album: album['album']!,
@@ -493,19 +560,31 @@ class VinylHomePageState extends State<VinylHomePage> {
                                   ownedAlbums[i]['album']!,
                                   style: const TextStyle(fontSize: 15),
                                 ),
-                                subtitle: Text(
-                                  ownedAlbums[i]['release'] ?? 'N/A',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                                  ),
+                                subtitle: Row(
+                                  children: [
+                                    Text(
+                                      ownedAlbums[i]['release'] ?? 'N/A',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                                      ),
+                                    ),
+                                    if (_hasDiscogsId(ownedAlbums[i])) ...[
+                                      const SizedBox(width: 6),
+                                      Icon(
+                                        Icons.check_circle,
+                                        size: 14,
+                                        color: theme.colorScheme.primary.withValues(alpha: 0.6),
+                                      ),
+                                    ],
+                                  ],
                                 ),
                                 trailing: Icon(
                                   Icons.chevron_right_rounded,
                                   color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
                                 ),
                                 onTap: () => _navigateToCoverArt(context, ownedAlbums[i]),
-                                onLongPress: () => _confirmDeleteOwned(context, ownedAlbums[i]),
+                                onLongPress: () => _showOwnedAlbumActions(context, ownedAlbums[i]),
                               ),
                               if (i < ownedAlbums.length - 1)
                                 Divider(

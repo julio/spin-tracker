@@ -18,7 +18,7 @@ class DiscogsService {
   }
 
   Map<String, String> get _headers => {
-    'Authorization': 'Discogs token $discogsPersonalAccessToken',
+    'Authorization': 'Discogs token=$discogsPersonalAccessToken',
     'User-Agent': 'SpinTracker/1.0',
   };
 
@@ -143,6 +143,114 @@ class DiscogsService {
       print('DEBUG: Exception - $error'); // Direct console output
       _logger.severe('$error\n$stackTrace');
       return null;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> searchReleases({
+    required String artist,
+    required String title,
+  }) async {
+    try {
+      final queryParams = {
+        'artist': artist,
+        'release_title': title,
+        'type': 'release',
+        'format': 'Vinyl',
+        'per_page': '20',
+      };
+      final uri = Uri.https(
+        'api.discogs.com',
+        '/database/search',
+        queryParams,
+      );
+
+      print('DEBUG: searchReleases URL: $uri');
+      final response =
+          await http.get(uri, headers: _headers).timeout(_timeout);
+
+      print('DEBUG: searchReleases response: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final results = List<Map<String, dynamic>>.from(data['results'] ?? []);
+        print('DEBUG: searchReleases found ${results.length} results');
+        return results;
+      } else {
+        print('DEBUG: searchReleases failed: ${response.statusCode} ${response.body}');
+        _logger.warning('Search failed: ${response.statusCode}');
+        throw Exception('Search failed: ${response.statusCode}');
+      }
+    } catch (e, stackTrace) {
+      print('DEBUG: searchReleases error: $e');
+      _logger.severe('Error searching releases: $e\n$stackTrace');
+      rethrow;
+    }
+  }
+
+  /// Adds a release to the Discogs collection.
+  /// Returns the instance_id on success, or null on failure.
+  Future<int?> addToCollection(int releaseId) async {
+    try {
+      print('DEBUG: addToCollection called for release $releaseId');
+      final response = await http
+          .post(
+            Uri.parse(
+              'https://api.discogs.com/users/$discogsUsername/collection/folders/1/releases/$releaseId',
+            ),
+            headers: _headers,
+          )
+          .timeout(_timeout);
+
+      print('DEBUG: addToCollection response: ${response.statusCode}');
+      print('DEBUG: addToCollection body: ${response.body}');
+
+      if (response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        final instanceId = data['instance_id'];
+        if (instanceId is int) {
+          _logger.info(
+            'Added release $releaseId to collection (instance: $instanceId)',
+          );
+          return instanceId;
+        }
+        // instance_id not in response but add succeeded
+        print('DEBUG: 201 but no instance_id, returning -1 as placeholder');
+        return -1;
+      } else {
+        _logger.warning(
+          'Failed to add to collection: ${response.statusCode}\n${response.body}',
+        );
+        return null;
+      }
+    } catch (e, stackTrace) {
+      print('DEBUG: addToCollection error: $e');
+      _logger.severe('Error adding to collection: $e\n$stackTrace');
+      return null;
+    }
+  }
+
+  Future<bool> removeFromCollection(int releaseId, int instanceId) async {
+    try {
+      final response = await http
+          .delete(
+            Uri.parse(
+              'https://api.discogs.com/users/$discogsUsername/collection/folders/1/releases/$releaseId/instances/$instanceId',
+            ),
+            headers: _headers,
+          )
+          .timeout(_timeout);
+
+      if (response.statusCode == 204) {
+        _logger.info('Removed release $releaseId instance $instanceId');
+        return true;
+      } else {
+        _logger.warning(
+          'Failed to remove from collection: ${response.statusCode}\n${response.body}',
+        );
+        return false;
+      }
+    } catch (e, stackTrace) {
+      _logger.severe('Error removing from collection: $e\n$stackTrace');
+      return false;
     }
   }
 
