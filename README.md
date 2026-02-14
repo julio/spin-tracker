@@ -1,4 +1,4 @@
-# Spin Tracker
+# Needl
 
 A Flutter application to manage and track your vinyl record collection. Keep track of owned albums and maintain a wishlist, with album cover art integration via Spotify's API.
 

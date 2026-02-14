@@ -1,7 +1,7 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:logging/logging.dart';
-import 'package:spin_tracker/config.dart';
+import 'package:needl/config.dart';
 
 class ApiUtils {
   static final _logger = Logger('ApiUtils');

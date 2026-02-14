@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Spin Tracker</string>
+	<string>Needl</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,7 +15,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>spin_tracker</string>
+	<string>needl</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -56,10 +56,10 @@
 		<dict>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>spin-tracker</string>
+				<string>needl</string>
 			</array>
 			<key>CFBundleURLName</key>
-			<string>com.morgane.spinTracker</string>
+			<string>com.morgane.needl</string>
 		</dict>
 	</array>
 	<key>LSApplicationQueriesSchemes</key>

@@ -3,21 +3,21 @@ import 'vinyl_home_page.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const SpinTrackerApp());
+  runApp(const NeedlApp());
 }
 
-class SpinTrackerApp extends StatefulWidget {
-  const SpinTrackerApp({super.key});
+class NeedlApp extends StatefulWidget {
+  const NeedlApp({super.key});
 
-  static _SpinTrackerAppState? of(BuildContext context) {
-    return context.findAncestorStateOfType<_SpinTrackerAppState>();
+  static _NeedlAppState? of(BuildContext context) {
+    return context.findAncestorStateOfType<_NeedlAppState>();
   }
 
   @override
-  State<SpinTrackerApp> createState() => _SpinTrackerAppState();
+  State<NeedlApp> createState() => _NeedlAppState();
 }
 
-class _SpinTrackerAppState extends State<SpinTrackerApp> {
+class _NeedlAppState extends State<NeedlApp> {
   ThemeMode _themeMode = ThemeMode.dark;
 
   void toggleTheme() {
@@ -56,7 +56,7 @@ class _SpinTrackerAppState extends State<SpinTrackerApp> {
     );
 
     return MaterialApp(
-      title: 'Spin Tracker',
+      title: 'Needl',
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: lightColorScheme,

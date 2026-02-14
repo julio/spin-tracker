@@ -1,11 +1,11 @@
 {
-    "name": "spin_tracker",
-    "short_name": "spin_tracker",
+    "name": "Needl",
+    "short_name": "Needl",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Needl - Your vinyl collection tracker.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

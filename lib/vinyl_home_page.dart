@@ -9,6 +9,7 @@ import 'services/discogs_service.dart';
 import 'services/sheets_import_service.dart';
 import 'add_record_view.dart';
 import 'discogs_search_sheet.dart';
+import 'sync_status_view.dart';
 
 final _logger = Logger('VinylHomePage');
 
@@ -355,7 +356,7 @@ class VinylHomePageState extends State<VinylHomePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Spin Tracker'),
+        title: const Text('Needl'),
         actions: [
           IconButton(
             icon: const Icon(Icons.add_rounded),
@@ -374,6 +375,16 @@ class VinylHomePageState extends State<VinylHomePage> {
             icon: const Icon(Icons.refresh_rounded),
             onPressed: isLoading ? null : _reimportFromSheets,
             tooltip: 'Reimport from Sheets',
+          ),
+          IconButton(
+            icon: const Icon(Icons.analytics_rounded),
+            onPressed: isLoading ? null : () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SyncStatusView()),
+              );
+            },
+            tooltip: 'Sync Status',
           ),
           PopupMenuButton<SortOption>(
             icon: const Icon(Icons.sort_rounded),

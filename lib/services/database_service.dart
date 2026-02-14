@@ -67,6 +67,18 @@ class DatabaseService {
     return (result.first['count'] as int) > 0;
   }
 
+  Future<int> getOwnedCount() async {
+    final db = await database;
+    final result = await db.rawQuery('SELECT COUNT(*) as count FROM owned_albums');
+    return result.first['count'] as int;
+  }
+
+  Future<int> getWantedCount() async {
+    final db = await database;
+    final result = await db.rawQuery('SELECT COUNT(*) as count FROM wanted_albums');
+    return result.first['count'] as int;
+  }
+
   Future<List<Map<String, String>>> getAllOwnedAlbums() async {
     final db = await database;
     final rows = await db.query('owned_albums');
