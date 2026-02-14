@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'services/database_service.dart';
 import 'discogs_search_sheet.dart';
 
@@ -15,12 +16,148 @@ class AddRecordViewState extends State<AddRecordView> {
   final _albumController = TextEditingController();
   DateTime? _releaseDate;
   bool _isSaving = false;
+  bool _isSearching = false;
 
   @override
   void dispose() {
     _artistController.dispose();
     _albumController.dispose();
     super.dispose();
+  }
+
+  Future<void> _findReleaseDate() async {
+    final artist = _artistController.text.trim();
+    final album = _albumController.text.trim();
+
+    if (artist.isEmpty || album.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter artist and album first')),
+      );
+      return;
+    }
+
+    setState(() => _isSearching = true);
+
+    try {
+      final query = Uri.encodeQueryComponent('$artist $album release date');
+      final url = Uri.parse('https://html.duckduckgo.com/html/?q=$query');
+      final response = await http.get(url, headers: {
+        'User-Agent':
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+      });
+
+      if (response.statusCode == 200) {
+        final date = _parseDateFromHtml(response.body);
+        if (date != null && mounted) {
+          setState(() {
+            _releaseDate = date;
+            _isSearching = false;
+          });
+          return;
+        }
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not find release date')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not find release date')),
+      );
+    }
+
+    if (mounted) setState(() => _isSearching = false);
+  }
+
+  DateTime? _parseDateFromHtml(String html) {
+    final text = html.replaceAll(RegExp(r'<[^>]*>'), ' ');
+
+    const months = {
+      'january': 1, 'february': 2, 'march': 3, 'april': 4,
+      'may': 5, 'june': 6, 'july': 7, 'august': 8,
+      'september': 9, 'october': 10, 'november': 11, 'december': 12,
+    };
+
+    // Date pattern handling ordinals (1st, 2nd, 3rd, 4th, etc.)
+    const monthNames =
+        r'January|February|March|April|May|June|July|August|September|October|November|December';
+    final mdyPattern =
+        '($monthNames)\\s+(\\d{1,2})(?:st|nd|rd|th)?,?\\s+(\\d{4})';
+    final dmyPattern =
+        '(\\d{1,2})(?:st|nd|rd|th)?\\s+($monthNames),?\\s+(\\d{4})';
+
+    DateTime? tryParseMdy(Match m) {
+      final month = months[m.group(1)!.toLowerCase()]!;
+      final day = int.parse(m.group(2)!);
+      final year = int.parse(m.group(3)!);
+      if (day >= 1 && day <= 31 && year >= 1900) return DateTime(year, month, day);
+      return null;
+    }
+
+    DateTime? tryParseDmy(Match m) {
+      final day = int.parse(m.group(1)!);
+      final month = months[m.group(2)!.toLowerCase()]!;
+      final year = int.parse(m.group(3)!);
+      if (day >= 1 && day <= 31 && year >= 1900) return DateTime(year, month, day);
+      return null;
+    }
+
+    // 1) Look for "release date : <date>" context
+    final contextMatch = RegExp(
+      'release\\s*date\\s*:?\\s*$mdyPattern',
+      caseSensitive: false,
+    ).firstMatch(text);
+    if (contextMatch != null) {
+      final d = tryParseMdy(contextMatch);
+      if (d != null) return d;
+    }
+
+    // 2) Look for "released (on) <date>" context
+    final releasedMatch = RegExp(
+      'released\\s+(?:on\\s+)?$mdyPattern',
+      caseSensitive: false,
+    ).firstMatch(text);
+    if (releasedMatch != null) {
+      final d = tryParseMdy(releasedMatch);
+      if (d != null) return d;
+    }
+
+    // 3) Same context patterns but DD Month YYYY
+    final contextDmy = RegExp(
+      'release\\s*date\\s*:?\\s*$dmyPattern',
+      caseSensitive: false,
+    ).firstMatch(text);
+    if (contextDmy != null) {
+      final d = tryParseDmy(contextDmy);
+      if (d != null) return d;
+    }
+
+    final releasedDmy = RegExp(
+      'released\\s+(?:on\\s+)?$dmyPattern',
+      caseSensitive: false,
+    ).firstMatch(text);
+    if (releasedDmy != null) {
+      final d = tryParseDmy(releasedDmy);
+      if (d != null) return d;
+    }
+
+    // 4) Fallback: first Month DD, YYYY in the text
+    final fallback = RegExp(mdyPattern, caseSensitive: false).firstMatch(text);
+    if (fallback != null) {
+      final d = tryParseMdy(fallback);
+      if (d != null) return d;
+    }
+
+    // 5) Fallback: first DD Month YYYY in the text
+    final fallbackDmy = RegExp(dmyPattern, caseSensitive: false).firstMatch(text);
+    if (fallbackDmy != null) {
+      final d = tryParseDmy(fallbackDmy);
+      if (d != null) return d;
+    }
+
+    return null;
   }
 
   Future<void> _pickDate() async {
@@ -143,7 +280,22 @@ class AddRecordViewState extends State<AddRecordView> {
                   ),
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: _isSearching ? null : _findReleaseDate,
+                  icon: _isSearching
+                      ? const SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.search_rounded, size: 18),
+                  label: Text(_isSearching ? 'Searching...' : 'Find Release Date'),
+                ),
+              ),
+              const SizedBox(height: 24),
               FilledButton(
                 onPressed: _isSaving ? null : _save,
                 style: FilledButton.styleFrom(

@@ -146,39 +146,71 @@ class DiscogsService {
     }
   }
 
+  Future<List<Map<String, dynamic>>> _doSearch(
+      Map<String, String> queryParams) async {
+    final uri = Uri.https('api.discogs.com', '/database/search', queryParams);
+    print('DEBUG: searchReleases URL: $uri');
+    final response =
+        await http.get(uri, headers: _headers).timeout(_timeout);
+    print('DEBUG: searchReleases response: ${response.statusCode}');
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final results =
+          List<Map<String, dynamic>>.from(data['results'] ?? []);
+      print('DEBUG: searchReleases found ${results.length} results');
+      return results;
+    } else {
+      print(
+          'DEBUG: searchReleases failed: ${response.statusCode} ${response.body}');
+      _logger.warning('Search failed: ${response.statusCode}');
+      throw Exception('Search failed: ${response.statusCode}');
+    }
+  }
+
+  bool _isVinyl(Map<String, dynamic> result) {
+    final formats = result['format'] as List? ?? [];
+    return formats.any((f) =>
+        f.toString().toLowerCase() == 'vinyl');
+  }
+
   Future<List<Map<String, dynamic>>> searchReleases({
     required String artist,
     required String title,
   }) async {
     try {
-      final queryParams = {
+      // 1) Exact match, vinyl only
+      var results = await _doSearch({
         'artist': artist,
         'release_title': title,
         'type': 'release',
         'format': 'Vinyl',
         'per_page': '20',
-      };
-      final uri = Uri.https(
-        'api.discogs.com',
-        '/database/search',
-        queryParams,
-      );
+      });
+      if (results.isNotEmpty) return results;
 
-      print('DEBUG: searchReleases URL: $uri');
-      final response =
-          await http.get(uri, headers: _headers).timeout(_timeout);
+      // 2) Fuzzy search, vinyl only
+      results = await _doSearch({
+        'artist': artist,
+        'q': title,
+        'type': 'release',
+        'format': 'Vinyl',
+        'per_page': '20',
+      });
+      if (results.isNotEmpty) return results;
 
-      print('DEBUG: searchReleases response: ${response.statusCode}');
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final results = List<Map<String, dynamic>>.from(data['results'] ?? []);
-        print('DEBUG: searchReleases found ${results.length} results');
-        return results;
-      } else {
-        print('DEBUG: searchReleases failed: ${response.statusCode} ${response.body}');
-        _logger.warning('Search failed: ${response.statusCode}');
-        throw Exception('Search failed: ${response.statusCode}');
-      }
+      // 3) Fuzzy search, all formats — sort vinyl to top
+      results = await _doSearch({
+        'artist': artist,
+        'q': title,
+        'type': 'release',
+        'per_page': '20',
+      });
+      results.sort((a, b) {
+        final aVinyl = _isVinyl(a) ? 0 : 1;
+        final bVinyl = _isVinyl(b) ? 0 : 1;
+        return aVinyl.compareTo(bVinyl);
+      });
+      return results;
     } catch (e, stackTrace) {
       print('DEBUG: searchReleases error: $e');
       _logger.severe('Error searching releases: $e\n$stackTrace');
