@@ -1,0 +1,136 @@
+import 'package:flutter/material.dart';
+
+class SyncDifferencesView extends StatelessWidget {
+  final List<Map<String, String>> dbAlbums;
+  final List<Map<String, String>> sheetsAlbums;
+  final List<Map<String, String>> discogsAlbums;
+
+  const SyncDifferencesView({
+    super.key,
+    required this.dbAlbums,
+    required this.sheetsAlbums,
+    required this.discogsAlbums,
+  });
+
+  static String _normalize(String s) {
+    var n = s.toLowerCase();
+    // Strip Discogs disambiguation like "(2)", "(3)", etc.
+    n = n.replaceAll(RegExp(r'\s*\(\d+\)\s*$'), '');
+    // Strip leading "the "
+    n = n.replaceAll(RegExp(r'^the\s+'), '');
+    // Replace common accented characters with base letters
+    const from = 'àáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ';
+    const to   = 'aaaaaaaceeeeiiiidnoooooouuuuyby';
+    for (var i = 0; i < from.length; i++) {
+      n = n.replaceAll(from[i], to[i]);
+    }
+    // Strip all non-alphanumeric (handles punctuation differences)
+    n = n.replaceAll(RegExp(r'[^a-z0-9]'), '');
+    return n;
+  }
+
+  static String _key(Map<String, String> album) =>
+      '${_normalize(album['artist']!)}|${_normalize(album['album']!)}';
+
+  static List<Map<String, String>> _diff(
+    List<Map<String, String>> source,
+    List<Map<String, String>> other,
+  ) {
+    final otherKeys = other.map(_key).toSet();
+    return source.where((a) => !otherKeys.contains(_key(a))).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    final dbNotInSheets = _diff(dbAlbums, sheetsAlbums);
+    final sheetsNotInDb = _diff(sheetsAlbums, dbAlbums);
+    final dbNotInDiscogs = _diff(dbAlbums, discogsAlbums);
+    final discogsNotInDb = _diff(discogsAlbums, dbAlbums);
+
+    final sections = <_DiffSection>[
+      if (dbNotInSheets.isNotEmpty)
+        _DiffSection('In DB but not in Sheets', dbNotInSheets, Icons.storage_rounded),
+      if (sheetsNotInDb.isNotEmpty)
+        _DiffSection('In Sheets but not in DB', sheetsNotInDb, Icons.table_chart_rounded),
+      if (dbNotInDiscogs.isNotEmpty)
+        _DiffSection('In DB but not in Discogs', dbNotInDiscogs, Icons.storage_rounded),
+      if (discogsNotInDb.isNotEmpty)
+        _DiffSection('In Discogs but not in DB', discogsNotInDb, Icons.cloud_rounded),
+    ];
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Differences'),
+      ),
+      body: sections.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.check_circle_rounded,
+                    color: theme.colorScheme.primary,
+                    size: 48,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'All sources match',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: sections.length,
+              itemBuilder: (context, index) {
+                final section = sections[index];
+                return _buildSection(theme, section);
+              },
+            ),
+    );
+  }
+
+  Widget _buildSection(ThemeData theme, _DiffSection section) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(section.icon, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '${section.title} (${section.albums.length})',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ...section.albums.map((album) => Padding(
+              padding: const EdgeInsets.only(left: 28, bottom: 4),
+              child: Text(
+                '${album['artist']} — ${album['album']}',
+                style: theme.textTheme.bodyMedium,
+              ),
+            )),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+}
+
+class _DiffSection {
+  final String title;
+  final List<Map<String, String>> albums;
+  final IconData icon;
+
+  _DiffSection(this.title, this.albums, this.icon);
+}

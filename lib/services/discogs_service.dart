@@ -110,6 +110,24 @@ class DiscogsService {
     }
   }
 
+  Future<List<Map<String, dynamic>>> getAllCollectionReleases() async {
+    final allReleases = <Map<String, dynamic>>[];
+    int page = 1;
+    while (true) {
+      final releases = await getCollectionReleases(
+        page: page,
+        perPage: 100,
+        sort: 'artist',
+        sortOrder: 'asc',
+      );
+      allReleases.addAll(releases);
+      if (releases.length < 100) break;
+      page++;
+    }
+    print('DEBUG: getAllCollectionReleases loaded ${allReleases.length} total');
+    return allReleases;
+  }
+
   Future<Map<String, dynamic>?> getReleaseDetails(int releaseId) async {
     try {
       _logger.info('Starting release details request for ID: $releaseId');

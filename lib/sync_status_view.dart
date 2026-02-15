@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'services/database_service.dart';
 import 'services/discogs_service.dart';
 import 'services/sheets_import_service.dart';
+import 'sync_differences_view.dart';
 
 class SyncStatusView extends StatefulWidget {
   const SyncStatusView({super.key});
@@ -19,6 +20,10 @@ class _SyncStatusViewState extends State<SyncStatusView> {
   int? discogsCount;
   int? sheetsOwnedCount;
   int? sheetsWantedCount;
+
+  List<Map<String, String>> _dbAlbums = [];
+  List<Map<String, String>> _sheetsAlbums = [];
+  List<Map<String, String>> _discogsAlbums = [];
 
   String? dbError;
   String? discogsError;
@@ -49,10 +54,13 @@ class _SyncStatusViewState extends State<SyncStatusView> {
     });
 
     try {
-      final ownedCount = await _dbService.getOwnedCount();
+      final owned = await _dbService.getAllOwnedAlbums();
       final wantedCount = await _dbService.getWantedCount();
       setState(() {
-        dbOwnedCount = ownedCount;
+        _dbAlbums = owned
+            .map((a) => {'artist': a['artist']!, 'album': a['album']!})
+            .toList();
+        dbOwnedCount = owned.length;
         dbWantedCount = wantedCount;
         isLoadingDb = false;
       });
@@ -71,9 +79,18 @@ class _SyncStatusViewState extends State<SyncStatusView> {
     });
 
     try {
-      final collectionInfo = await _discogsService.getCollectionInfo();
+      final releases = await _discogsService.getAllCollectionReleases();
       setState(() {
-        discogsCount = collectionInfo['count'] as int?;
+        _discogsAlbums = releases.map((r) {
+          final info = r['basic_information'] as Map<String, dynamic>;
+          final artists = info['artists'] as List?;
+          final artist = artists != null && artists.isNotEmpty
+              ? artists.first['name'] as String
+              : '';
+          final album = info['title'] as String? ?? '';
+          return {'artist': artist, 'album': album};
+        }).toList();
+        discogsCount = releases.length;
         isLoadingDiscogs = false;
       });
     } catch (e) {
@@ -93,6 +110,9 @@ class _SyncStatusViewState extends State<SyncStatusView> {
     try {
       final data = await SheetsImportService.importFromSheets();
       setState(() {
+        _sheetsAlbums = data.owned
+            .map((a) => {'artist': a['artist']!, 'album': a['album']!})
+            .toList();
         sheetsOwnedCount = data.owned.length;
         sheetsWantedCount = data.wanted.length;
         isLoadingSheets = false;
@@ -170,6 +190,25 @@ class _SyncStatusViewState extends State<SyncStatusView> {
               error: sheetsError,
               onRetry: _fetchSheetsCount,
             ),
+            if (!isLoading && hasAllData) ...[
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => SyncDifferencesView(
+                        dbAlbums: _dbAlbums,
+                        sheetsAlbums: _sheetsAlbums,
+                        discogsAlbums: _discogsAlbums,
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.compare_arrows_rounded),
+                label: const Text('View Differences'),
+              ),
+            ],
             const SizedBox(height: 24),
             Text(
               'Note: Counts may differ if recent changes haven\'t been synced. Use "Reimport from Sheets" to sync your data.',
