@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import 'services/discogs_service.dart';
+import 'services/discogs_auth_service.dart';
+import 'settings_view.dart';
 import 'components/bottom_nav.dart';
 import 'cover_art_view.dart';
 
@@ -36,11 +38,16 @@ class DiscogsCollectionViewState extends State<DiscogsCollectionView> {
   final ScrollController _scrollController = ScrollController();
   static const int _perPage = 20;
 
+  bool get _isDiscogsConnected =>
+      DiscogsAuthService().connectedUsername.value != null;
+
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    _loadReleases();
+    if (_isDiscogsConnected) {
+      _loadReleases();
+    }
   }
 
   @override
@@ -203,8 +210,42 @@ class DiscogsCollectionViewState extends State<DiscogsCollectionView> {
         body: Column(
           children: [
             Expanded(
-              child:
-                  _isLoading
+              child: !_isDiscogsConnected
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.album_rounded,
+                              size: 64,
+                              color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Connect your Discogs account in Settings to browse your collection.',
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            FilledButton.icon(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const SettingsView()),
+                                );
+                              },
+                              icon: const Icon(Icons.settings_rounded),
+                              label: const Text('Open Settings'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  : _isLoading
                       ? Center(
                         child: CircularProgressIndicator(
                           color: theme.colorScheme.primary,

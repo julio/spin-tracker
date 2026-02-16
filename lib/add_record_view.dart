@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'services/data_repository.dart';
+import 'services/discogs_auth_service.dart';
 import 'discogs_search_sheet.dart';
 
 class AddRecordView extends StatefulWidget {
@@ -138,7 +139,11 @@ class AddRecordViewState extends State<AddRecordView> {
       );
       if (!mounted) return;
       setState(() => _isSaving = false);
-      _showDiscogsSheet();
+      if (DiscogsAuthService().connectedUsername.value != null) {
+        _showDiscogsSheet();
+      } else {
+        if (mounted) Navigator.pop(context, true);
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

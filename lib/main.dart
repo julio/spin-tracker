@@ -1,8 +1,13 @@
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
+import 'package:logging/logging.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config.dart';
 import 'vinyl_home_page.dart';
 import 'auth/login_view.dart';
+import 'services/discogs_auth_service.dart';
+
+final _logger = Logger('Main');
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,6 +28,37 @@ class NeedlApp extends StatefulWidget {
 
 class _NeedlAppState extends State<NeedlApp> {
   ThemeMode _themeMode = ThemeMode.dark;
+  late final AppLinks _appLinks;
+
+  @override
+  void initState() {
+    super.initState();
+    _appLinks = AppLinks();
+    _initDeepLinks();
+    DiscogsAuthService().init();
+  }
+
+  void _initDeepLinks() {
+    _appLinks.uriLinkStream.listen((Uri uri) {
+      _handleDeepLink(uri);
+    });
+  }
+
+  void _handleDeepLink(Uri uri) {
+    if (uri.scheme == 'needl' && uri.host == 'discogs-callback') {
+      final oauthToken = uri.queryParameters['oauth_token'];
+      final oauthVerifier = uri.queryParameters['oauth_verifier'];
+      if (oauthToken != null && oauthVerifier != null) {
+        DiscogsAuthService()
+            .completeOAuthFlow(oauthToken, oauthVerifier)
+            .then((username) {
+          _logger.info('Discogs connected as $username');
+        }).catchError((e) {
+          _logger.severe('Discogs OAuth callback failed: $e');
+        });
+      }
+    }
+  }
 
   void toggleTheme() {
     setState(() {

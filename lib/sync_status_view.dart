@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'services/data_repository.dart';
 import 'services/discogs_service.dart';
+import 'services/discogs_auth_service.dart';
 import 'sync_differences_view.dart';
 
 class SyncStatusView extends StatefulWidget {
@@ -32,6 +33,9 @@ class _SyncStatusViewState extends State<SyncStatusView> {
   bool isLoadingDiscogs = true;
   bool isLoadingSupabase = true;
 
+  bool get _isDiscogsConnected =>
+      DiscogsAuthService().connectedUsername.value != null;
+
   @override
   void initState() {
     super.initState();
@@ -39,11 +43,19 @@ class _SyncStatusViewState extends State<SyncStatusView> {
   }
 
   Future<void> _fetchAllCounts() async {
-    await Future.wait([
+    final futures = <Future>[
       _fetchDatabaseCount(),
-      _fetchDiscogsCount(),
       _fetchSupabaseCount(),
-    ]);
+    ];
+    if (_isDiscogsConnected) {
+      futures.add(_fetchDiscogsCount());
+    } else {
+      setState(() {
+        isLoadingDiscogs = false;
+        discogsError = 'Discogs not connected';
+      });
+    }
+    await Future.wait(futures);
   }
 
   Future<void> _fetchDatabaseCount() async {
@@ -126,6 +138,11 @@ class _SyncStatusViewState extends State<SyncStatusView> {
   }
 
   bool get isInSync {
+    if (!_isDiscogsConnected) {
+      return dbOwnedCount != null &&
+          supabaseOwnedCount != null &&
+          dbOwnedCount == supabaseOwnedCount;
+    }
     return dbOwnedCount != null &&
         discogsCount != null &&
         supabaseOwnedCount != null &&
@@ -134,6 +151,9 @@ class _SyncStatusViewState extends State<SyncStatusView> {
   }
 
   bool get hasAllData {
+    if (!_isDiscogsConnected) {
+      return dbOwnedCount != null && supabaseOwnedCount != null;
+    }
     return dbOwnedCount != null &&
         discogsCount != null &&
         supabaseOwnedCount != null;
