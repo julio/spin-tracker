@@ -1,27 +1,22 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:logging/logging.dart';
-import 'package:needl/config.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ApiUtils {
   static final _logger = Logger('ApiUtils');
 
   static Future<String> getSpotifyAccessToken() async {
-    final response = await http.post(
-      Uri.parse('https://accounts.spotify.com/api/token'),
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: {
-        'grant_type': 'client_credentials',
-        'client_id': spotifyClientId,
-        'client_secret': spotifyClientSecret,
-      },
+    final response = await Supabase.instance.client.functions.invoke(
+      'spotify-token',
+      method: HttpMethod.post,
     );
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return data['access_token'];
+    final data = response.data as Map<String, dynamic>;
+    if (data.containsKey('access_token')) {
+      return data['access_token'] as String;
     } else {
-      throw Exception('Failed to get Spotify token: ${response.statusCode}');
+      throw Exception('Failed to get Spotify token: ${data['error'] ?? 'unknown error'}');
     }
   }
 

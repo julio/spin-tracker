@@ -4,12 +4,12 @@ import 'package:logging/logging.dart';
 import 'cover_art_view.dart';
 import 'api_utils.dart';
 import 'components/bottom_nav.dart';
-import 'services/database_service.dart';
+import 'services/data_repository.dart';
 import 'services/discogs_service.dart';
-import 'services/sheets_import_service.dart';
 import 'add_record_view.dart';
 import 'discogs_search_sheet.dart';
 import 'sync_status_view.dart';
+import 'services/auth_service.dart';
 
 final _logger = Logger('VinylHomePage');
 
@@ -25,7 +25,7 @@ class VinylHomePage extends StatefulWidget {
 }
 
 class VinylHomePageState extends State<VinylHomePage> {
-  final DatabaseService _dbService = DatabaseService();
+  final DataRepository _repo = DataRepository();
 
   List<Map<String, String>> _allOwnedAlbums = [];
   List<Map<String, String>> _allWantedAlbums = [];
@@ -51,9 +51,9 @@ class VinylHomePageState extends State<VinylHomePage> {
   Future<void> _loadData() async {
     setState(() => isLoading = true);
     try {
-      final hasData = await _dbService.hasData();
+      final hasData = await _repo.hasData();
       if (!hasData) {
-        await _importFromSheets();
+        await _repo.syncFromRemote();
       }
       await _loadFromDatabase();
     } catch (e) {
@@ -63,30 +63,26 @@ class VinylHomePageState extends State<VinylHomePage> {
     }
   }
 
-  Future<void> _importFromSheets() async {
-    _logger.info('Importing from Google Sheets...');
-    final data = await SheetsImportService.importFromSheets();
-    await _dbService.importOwnedAlbums(data.owned);
-    await _dbService.importWantedAlbums(data.wanted);
-    _logger.info('Import complete');
-  }
-
-  Future<void> _reimportFromSheets() async {
+  Future<void> _syncFromRemote() async {
     setState(() => isLoading = true);
     try {
-      await _dbService.clearAll();
-      await _importFromSheets();
+      await _repo.syncFromRemote();
       await _loadFromDatabase();
     } catch (e) {
-      _logger.severe('Error reimporting: $e');
+      _logger.severe('Error syncing: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Sync failed: $e')),
+        );
+      }
     } finally {
       setState(() => isLoading = false);
     }
   }
 
   Future<void> _loadFromDatabase() async {
-    _allOwnedAlbums = await _dbService.getAllOwnedAlbums();
-    _allWantedAlbums = await _dbService.getAllWantedAlbums();
+    _allOwnedAlbums = await _repo.getAllOwnedAlbums();
+    _allWantedAlbums = await _repo.getAllWantedAlbums();
 
     setState(() {
       ownedArtists =
@@ -296,7 +292,7 @@ class VinylHomePageState extends State<VinylHomePage> {
       );
       if (added == true) await _loadFromDatabase();
     } else if (action == 'delete_app') {
-      await _dbService.deleteOwnedAlbum(
+      await _repo.deleteOwnedAlbum(
         artist: album['artist']!,
         album: album['album']!,
         releaseDate: album['release'] ?? '',
@@ -308,7 +304,7 @@ class VinylHomePageState extends State<VinylHomePage> {
       if (discogsId != null && instanceId != null) {
         await DiscogsService().removeFromCollection(discogsId, instanceId);
       }
-      await _dbService.deleteOwnedAlbum(
+      await _repo.deleteOwnedAlbum(
         artist: album['artist']!,
         album: album['album']!,
         releaseDate: album['release'] ?? '',
@@ -334,12 +330,16 @@ class VinylHomePageState extends State<VinylHomePage> {
       ),
     );
     if (confirmed == true) {
-      await _dbService.deleteWantedAlbum(
+      await _repo.deleteWantedAlbum(
         artist: album['artist']!,
         album: album['album']!,
       );
       await _loadFromDatabase();
     }
+  }
+
+  Future<void> _signOut() async {
+    await AuthService().signOut();
   }
 
   @override
@@ -372,9 +372,9 @@ class VinylHomePageState extends State<VinylHomePage> {
             tooltip: 'Add Record',
           ),
           IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: isLoading ? null : _reimportFromSheets,
-            tooltip: 'Reimport from Sheets',
+            icon: const Icon(Icons.sync_rounded),
+            onPressed: isLoading ? null : _syncFromRemote,
+            tooltip: 'Sync from Supabase',
           ),
           IconButton(
             icon: const Icon(Icons.analytics_rounded),
@@ -386,27 +386,42 @@ class VinylHomePageState extends State<VinylHomePage> {
             },
             tooltip: 'Sync Status',
           ),
-          PopupMenuButton<SortOption>(
-            icon: const Icon(Icons.sort_rounded),
-            onSelected: (SortOption option) {
-              setState(() {
-                currentSortOption = option;
-                if (selectedArtist != null) {
-                  getOwnedAlbums(selectedArtist!.toLowerCase());
-                }
-              });
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert_rounded),
+            onSelected: (value) {
+              if (value == 'sort_date') {
+                setState(() {
+                  currentSortOption = SortOption.releaseDate;
+                  if (selectedArtist != null) {
+                    getOwnedAlbums(selectedArtist!.toLowerCase());
+                  }
+                });
+              } else if (value == 'sort_artist') {
+                setState(() {
+                  currentSortOption = SortOption.artistAlbum;
+                  if (selectedArtist != null) {
+                    getOwnedAlbums(selectedArtist!.toLowerCase());
+                  }
+                });
+              } else if (value == 'sign_out') {
+                _signOut();
+              }
             },
-            itemBuilder:
-                (BuildContext context) => [
-                  const PopupMenuItem(
-                    value: SortOption.releaseDate,
-                    child: Text('Sort by Release Date'),
-                  ),
-                  const PopupMenuItem(
-                    value: SortOption.artistAlbum,
-                    child: Text('Sort by Artist/Album'),
-                  ),
-                ],
+            itemBuilder: (BuildContext context) => [
+              const PopupMenuItem(
+                value: 'sort_date',
+                child: Text('Sort by Release Date'),
+              ),
+              const PopupMenuItem(
+                value: 'sort_artist',
+                child: Text('Sort by Artist/Album'),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: 'sign_out',
+                child: Text('Sign Out'),
+              ),
+            ],
           ),
         ],
       ),

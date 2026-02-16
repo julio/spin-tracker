@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'services/database_service.dart';
+import 'services/data_repository.dart';
 import 'services/discogs_service.dart';
 
 /// Shows a modal bottom sheet to search Discogs and add a vinyl release
@@ -81,7 +81,7 @@ class _DiscogsSearchSheetState extends State<DiscogsSearchSheet> {
     setState(() => _addingId = null);
 
     if (instanceId != null) {
-      await DatabaseService().updateDiscogsId(
+      await DataRepository().updateDiscogsId(
         artist: widget.artist,
         album: widget.album,
         releaseDate: widget.releaseDate,
