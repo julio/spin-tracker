@@ -51,6 +51,7 @@ class DataRepository {
     required String artist,
     required String album,
     required String releaseDate,
+    String acquiredAt = '',
     int? discogsId,
     int? discogsInstanceId,
   }) async {
@@ -68,6 +69,7 @@ class DataRepository {
       artist: artist,
       album: album,
       releaseDate: releaseDate,
+      acquiredAt: acquiredAt,
       discogsId: discogsId,
       discogsInstanceId: discogsInstanceId,
     );
@@ -75,6 +77,7 @@ class DataRepository {
       artist: artist,
       album: album,
       releaseDate: releaseDate,
+      acquiredAt: acquiredAt,
       discogsId: discogsId,
       discogsInstanceId: discogsInstanceId,
     );

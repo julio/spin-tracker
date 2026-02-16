@@ -595,6 +595,16 @@ class VinylHomePageState extends State<VinylHomePage> {
                                         color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                                       ),
                                     ),
+                                    if ((ownedAlbums[i]['acquired_at'] ?? '').isNotEmpty) ...[
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'acq ${ownedAlbums[i]['acquired_at']}',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                                        ),
+                                      ),
+                                    ],
                                     if (_hasDiscogsId(ownedAlbums[i])) ...[
                                       const SizedBox(width: 6),
                                       Icon(

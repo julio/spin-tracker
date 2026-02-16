@@ -23,6 +23,7 @@ class SupabaseDataService {
       'release': row['release_date'] as String? ?? '',
       'discogs_id': row['discogs_id']?.toString() ?? '',
       'discogs_instance_id': row['discogs_instance_id']?.toString() ?? '',
+      'acquired_at': row['acquired_at'] as String? ?? '',
     }).toList();
   }
 
@@ -39,6 +40,7 @@ class SupabaseDataService {
     required String artist,
     required String album,
     required String releaseDate,
+    String acquiredAt = '',
     int? discogsId,
     int? discogsInstanceId,
   }) async {
@@ -47,6 +49,7 @@ class SupabaseDataService {
       'artist': artist,
       'album': album,
       'release_date': releaseDate,
+      'acquired_at': acquiredAt,
       if (discogsId != null) 'discogs_id': discogsId,
       if (discogsInstanceId != null) 'discogs_instance_id': discogsInstanceId,
     });
@@ -140,6 +143,7 @@ class SupabaseDataService {
       'artist': a['artist'] ?? '',
       'album': a['album'] ?? '',
       'release_date': a['release'] ?? '',
+      'acquired_at': a['acquired_at'] ?? '',
     }).toList();
     // Upsert in batches of 500
     for (var i = 0; i < rows.length; i += 500) {

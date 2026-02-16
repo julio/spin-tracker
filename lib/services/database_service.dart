@@ -30,7 +30,7 @@ class DatabaseService {
 
     return sqflite.openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE owned_albums (
@@ -39,7 +39,8 @@ class DatabaseService {
             album TEXT NOT NULL,
             release_date TEXT NOT NULL DEFAULT '',
             discogs_id INTEGER,
-            discogs_instance_id INTEGER
+            discogs_instance_id INTEGER,
+            acquired_at TEXT NOT NULL DEFAULT ''
           )
         ''');
         await db.execute('''
@@ -56,6 +57,9 @@ class DatabaseService {
         if (oldVersion < 2) {
           await db.execute('ALTER TABLE owned_albums ADD COLUMN discogs_id INTEGER');
           await db.execute('ALTER TABLE owned_albums ADD COLUMN discogs_instance_id INTEGER');
+        }
+        if (oldVersion < 3) {
+          await db.execute("ALTER TABLE owned_albums ADD COLUMN acquired_at TEXT NOT NULL DEFAULT ''");
         }
       },
     );
@@ -88,6 +92,7 @@ class DatabaseService {
       'release': row['release_date'] as String,
       'discogs_id': row['discogs_id']?.toString() ?? '',
       'discogs_instance_id': row['discogs_instance_id']?.toString() ?? '',
+      'acquired_at': row['acquired_at'] as String? ?? '',
     }).toList();
   }
 
@@ -108,6 +113,7 @@ class DatabaseService {
           'artist': album['artist'] ?? '',
           'album': album['album'] ?? '',
           'release_date': album['release'] ?? '',
+          'acquired_at': album['acquired_at'] ?? '',
         });
       }
     });
@@ -129,6 +135,7 @@ class DatabaseService {
     required String artist,
     required String album,
     required String releaseDate,
+    String acquiredAt = '',
     int? discogsId,
     int? discogsInstanceId,
   }) async {
@@ -137,6 +144,7 @@ class DatabaseService {
       'artist': artist,
       'album': album,
       'release_date': releaseDate,
+      'acquired_at': acquiredAt,
       if (discogsId != null) 'discogs_id': discogsId,
       if (discogsInstanceId != null) 'discogs_instance_id': discogsInstanceId,
     });

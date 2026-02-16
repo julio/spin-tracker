@@ -16,6 +16,7 @@ class AddRecordViewState extends State<AddRecordView> {
   final _artistController = TextEditingController();
   final _albumController = TextEditingController();
   DateTime? _releaseDate;
+  DateTime _acquiredDate = DateTime.now();
   bool _isSaving = false;
   bool _isSearching = false;
 
@@ -108,6 +109,18 @@ class AddRecordViewState extends State<AddRecordView> {
     }
   }
 
+  Future<void> _pickAcquiredDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _acquiredDate,
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      setState(() => _acquiredDate = picked);
+    }
+  }
+
   String _formatDate(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
@@ -121,6 +134,7 @@ class AddRecordViewState extends State<AddRecordView> {
         artist: _artistController.text.trim(),
         album: _albumController.text.trim(),
         releaseDate: _releaseDate != null ? _formatDate(_releaseDate!) : '',
+        acquiredAt: _formatDate(_acquiredDate),
       );
       if (!mounted) return;
       setState(() => _isSaving = false);
@@ -229,6 +243,29 @@ class AddRecordViewState extends State<AddRecordView> {
                         )
                       : const Icon(Icons.search_rounded, size: 18),
                   label: Text(_isSearching ? 'Searching...' : 'Find Release Date'),
+                ),
+              ),
+              const SizedBox(height: 16),
+              InkWell(
+                onTap: _pickAcquiredDate,
+                borderRadius: BorderRadius.circular(12),
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: 'Acquired',
+                    filled: true,
+                    fillColor: theme.colorScheme.surfaceContainerHighest,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    suffixIcon: const Icon(Icons.calendar_today_rounded, size: 20),
+                  ),
+                  child: Text(
+                    _formatDate(_acquiredDate),
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
