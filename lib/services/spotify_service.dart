@@ -1,7 +1,7 @@
 import 'package:spotify_sdk/spotify_sdk.dart';
-import 'package:spotify/spotify.dart';
 import 'package:logging/logging.dart';
 import '../config.dart';
+import '../api_utils.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
@@ -9,7 +9,6 @@ import 'package:url_launcher/url_launcher.dart';
 
 class SpotifyService {
   static final SpotifyService _instance = SpotifyService._internal();
-  late final SpotifyApi _spotifyApi;
   bool _isConnected = false;
   final _logger = Logger('SpotifyService');
 
@@ -17,11 +16,7 @@ class SpotifyService {
     return _instance;
   }
 
-  SpotifyService._internal() {
-    _spotifyApi = SpotifyApi(
-      SpotifyApiCredentials(spotifyClientId, spotifyClientSecret),
-    );
-  }
+  SpotifyService._internal();
 
   Future<bool> _checkSpotifyInstallation() async {
     try {
@@ -37,7 +32,6 @@ class SpotifyService {
 
   Future<bool> connect() async {
     try {
-      // First verify Spotify is installed
       final isInstalled = await _checkSpotifyInstallation();
       if (!isInstalled) {
         _logger.severe('Spotify app is not accessible via URL scheme');
@@ -46,10 +40,8 @@ class SpotifyService {
         );
       }
 
-      // Add a small delay to ensure Spotify has time to initialize
       await Future.delayed(const Duration(seconds: 2));
 
-      // Try to initialize the connection with all necessary scopes
       _logger.info('Attempting to connect to Spotify...');
       _isConnected = await SpotifySdk.connectToSpotifyRemote(
         clientId: spotifyClientId,
@@ -70,11 +62,9 @@ class SpotifyService {
     } catch (e) {
       _logger.severe('Failed to connect to Spotify: $e');
       if (e.toString().contains('CouldNotFindSpotifyApp')) {
-        // Try launching Spotify manually
         try {
           final spotifyUri = Uri.parse('spotify://');
           await launchUrl(spotifyUri, mode: LaunchMode.externalApplication);
-          // Wait a moment and try connecting again
           await Future.delayed(const Duration(seconds: 2));
           return await connect();
         } catch (launchError) {
@@ -87,10 +77,8 @@ class SpotifyService {
 
   Future<void> playAlbum(String artist, String album) async {
     try {
-      _logger.info('Getting Spotify access token...');
-      final token = await _spotifyApi.getCredentials().then(
-        (creds) => creds.accessToken,
-      );
+      _logger.info('Getting Spotify access token via Edge Function...');
+      final token = await ApiUtils.getSpotifyAccessToken();
 
       final encodedQuery = Uri.encodeComponent('$artist $album');
       _logger.info('Searching for album: $artist - $album');
@@ -110,7 +98,6 @@ class SpotifyService {
             'Found album URI: $albumUri, attempting to open in Spotify...',
           );
 
-          // Convert spotify:album:1234 to spotify://album/1234
           final spotifyId = albumUri.split(':').last;
           final playUri = Uri.parse('spotify://album/$spotifyId');
 

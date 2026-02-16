@@ -8,27 +8,16 @@ class DiscogsService {
   final _logger = Logger('DiscogsService');
   static const _timeout = Duration(seconds: 10);
 
-  factory DiscogsService() {
-    print('DEBUG: DiscogsService factory called'); // Immediate print
-    return _instance;
-  }
-
-  DiscogsService._internal() {
-    print('DEBUG: DiscogsService._internal called'); // Immediate print
-  }
+  factory DiscogsService() => _instance;
+  DiscogsService._internal();
 
   Map<String, String> get _headers => {
     'Authorization': 'Discogs token=$discogsPersonalAccessToken',
-    'User-Agent': 'SpinTracker/1.0',
+    'User-Agent': 'Needl/1.0',
   };
 
   Future<Map<String, dynamic>> getCollectionInfo() async {
     try {
-      _logger.info('Starting collection info request...');
-      print(
-        'DEBUG: About to make collection info request',
-      ); // Direct console output
-
       final response = await http
           .get(
             Uri.parse(
@@ -38,26 +27,13 @@ class DiscogsService {
           )
           .timeout(_timeout);
 
-      print(
-        'DEBUG: Got collection info response: ${response.statusCode}',
-      ); // Direct console output
-      _logger.info('Collection info response status: ${response.statusCode}');
-
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        _logger.info('Collection count: ${data['count']}');
-        return data;
+        return jsonDecode(response.body);
       } else {
-        final error =
-            'Failed to get collection info: ${response.statusCode}\nResponse: ${response.body}\nHeaders: ${response.headers}';
-        print('DEBUG: Error - $error'); // Direct console output
-        _logger.warning(error);
-        throw Exception(error);
+        throw Exception('Failed to get collection info: ${response.statusCode}');
       }
-    } catch (e, stackTrace) {
-      final error = 'Error getting collection info: $e';
-      print('DEBUG: Exception - $error'); // Direct console output
-      _logger.severe('$error\n$stackTrace');
+    } catch (e) {
+      _logger.severe('Error getting collection info: $e');
       rethrow;
     }
   }
@@ -69,43 +45,21 @@ class DiscogsService {
     String sortOrder = 'desc',
   }) async {
     try {
-      _logger.info('Starting collection releases request...');
-      print(
-        'DEBUG: About to make collection releases request',
-      ); // Direct console output
-
       final url =
           'https://api.discogs.com/users/$discogsUsername/collection/folders/0/releases?page=$page&per_page=$perPage&sort=$sort&sort_order=$sortOrder';
-      _logger.info('URL: $url');
-      print('DEBUG: URL - $url'); // Direct console output
 
       final response = await http
           .get(Uri.parse(url), headers: _headers)
           .timeout(_timeout);
 
-      print(
-        'DEBUG: Got collection releases response: ${response.statusCode}',
-      ); // Direct console output
-      _logger.info(
-        'Collection releases response status: ${response.statusCode}',
-      );
-
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final releases = List<Map<String, dynamic>>.from(data['releases']);
-        _logger.info('Fetched ${releases.length} releases');
-        return releases;
+        return List<Map<String, dynamic>>.from(data['releases']);
       } else {
-        final error =
-            'Failed to get collection releases: ${response.statusCode}\nResponse: ${response.body}\nHeaders: ${response.headers}';
-        print('DEBUG: Error - $error'); // Direct console output
-        _logger.warning(error);
-        throw Exception(error);
+        throw Exception('Failed to get collection releases: ${response.statusCode}');
       }
-    } catch (e, stackTrace) {
-      final error = 'Error getting collection releases: $e';
-      print('DEBUG: Exception - $error'); // Direct console output
-      _logger.severe('$error\n$stackTrace');
+    } catch (e) {
+      _logger.severe('Error getting collection releases: $e');
       rethrow;
     }
   }
@@ -124,17 +78,11 @@ class DiscogsService {
       if (releases.length < 100) break;
       page++;
     }
-    print('DEBUG: getAllCollectionReleases loaded ${allReleases.length} total');
     return allReleases;
   }
 
   Future<Map<String, dynamic>?> getReleaseDetails(int releaseId) async {
     try {
-      _logger.info('Starting release details request for ID: $releaseId');
-      print(
-        'DEBUG: About to make release details request for ID: $releaseId',
-      ); // Direct console output
-
       final response = await http
           .get(
             Uri.parse('https://api.discogs.com/releases/$releaseId'),
@@ -142,24 +90,14 @@ class DiscogsService {
           )
           .timeout(_timeout);
 
-      print(
-        'DEBUG: Got release details response: ${response.statusCode}',
-      ); // Direct console output
-      _logger.info('Release details response status: ${response.statusCode}');
-
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
-        final error =
-            'Failed to get release details: ${response.statusCode}\nResponse: ${response.body}';
-        print('DEBUG: Error - $error'); // Direct console output
-        _logger.warning(error);
+        _logger.warning('Failed to get release details: ${response.statusCode}');
         return null;
       }
-    } catch (e, stackTrace) {
-      final error = 'Error getting release details: $e';
-      print('DEBUG: Exception - $error'); // Direct console output
-      _logger.severe('$error\n$stackTrace');
+    } catch (e) {
+      _logger.severe('Error getting release details: $e');
       return null;
     }
   }
@@ -167,19 +105,12 @@ class DiscogsService {
   Future<List<Map<String, dynamic>>> _doSearch(
       Map<String, String> queryParams) async {
     final uri = Uri.https('api.discogs.com', '/database/search', queryParams);
-    print('DEBUG: searchReleases URL: $uri');
     final response =
         await http.get(uri, headers: _headers).timeout(_timeout);
-    print('DEBUG: searchReleases response: ${response.statusCode}');
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      final results =
-          List<Map<String, dynamic>>.from(data['results'] ?? []);
-      print('DEBUG: searchReleases found ${results.length} results');
-      return results;
+      return List<Map<String, dynamic>>.from(data['results'] ?? []);
     } else {
-      print(
-          'DEBUG: searchReleases failed: ${response.statusCode} ${response.body}');
       _logger.warning('Search failed: ${response.statusCode}');
       throw Exception('Search failed: ${response.statusCode}');
     }
@@ -229,18 +160,14 @@ class DiscogsService {
         return aVinyl.compareTo(bVinyl);
       });
       return results;
-    } catch (e, stackTrace) {
-      print('DEBUG: searchReleases error: $e');
-      _logger.severe('Error searching releases: $e\n$stackTrace');
+    } catch (e) {
+      _logger.severe('Error searching releases: $e');
       rethrow;
     }
   }
 
-  /// Adds a release to the Discogs collection.
-  /// Returns the instance_id on success, or null on failure.
   Future<int?> addToCollection(int releaseId) async {
     try {
-      print('DEBUG: addToCollection called for release $releaseId');
       final response = await http
           .post(
             Uri.parse(
@@ -250,30 +177,20 @@ class DiscogsService {
           )
           .timeout(_timeout);
 
-      print('DEBUG: addToCollection response: ${response.statusCode}');
-      print('DEBUG: addToCollection body: ${response.body}');
-
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body);
         final instanceId = data['instance_id'];
         if (instanceId is int) {
-          _logger.info(
-            'Added release $releaseId to collection (instance: $instanceId)',
-          );
+          _logger.info('Added release $releaseId to collection (instance: $instanceId)');
           return instanceId;
         }
-        // instance_id not in response but add succeeded
-        print('DEBUG: 201 but no instance_id, returning -1 as placeholder');
         return -1;
       } else {
-        _logger.warning(
-          'Failed to add to collection: ${response.statusCode}\n${response.body}',
-        );
+        _logger.warning('Failed to add to collection: ${response.statusCode}');
         return null;
       }
-    } catch (e, stackTrace) {
-      print('DEBUG: addToCollection error: $e');
-      _logger.severe('Error adding to collection: $e\n$stackTrace');
+    } catch (e) {
+      _logger.severe('Error adding to collection: $e');
       return null;
     }
   }
@@ -293,13 +210,11 @@ class DiscogsService {
         _logger.info('Removed release $releaseId instance $instanceId');
         return true;
       } else {
-        _logger.warning(
-          'Failed to remove from collection: ${response.statusCode}\n${response.body}',
-        );
+        _logger.warning('Failed to remove from collection: ${response.statusCode}');
         return false;
       }
-    } catch (e, stackTrace) {
-      _logger.severe('Error removing from collection: $e\n$stackTrace');
+    } catch (e) {
+      _logger.severe('Error removing from collection: $e');
       return false;
     }
   }
@@ -308,7 +223,6 @@ class DiscogsService {
     try {
       final basicInfo = release['basic_information'] as Map<String, dynamic>;
 
-      // Check if we already have a thumbnail
       if (basicInfo['thumb'] != null &&
           basicInfo['thumb'].toString().isNotEmpty) {
         return;
@@ -322,9 +236,7 @@ class DiscogsService {
         }
       }
     } catch (e) {
-      final error = 'Error loading thumbnail for release: $e';
-      print('DEBUG: Exception - $error'); // Direct console output
-      _logger.warning(error);
+      _logger.warning('Error loading thumbnail for release: $e');
     }
   }
 }

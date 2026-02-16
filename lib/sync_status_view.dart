@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'services/database_service.dart';
+import 'services/data_repository.dart';
 import 'services/discogs_service.dart';
-import 'services/sheets_import_service.dart';
 import 'sync_differences_view.dart';
 
 class SyncStatusView extends StatefulWidget {
@@ -12,26 +11,26 @@ class SyncStatusView extends StatefulWidget {
 }
 
 class _SyncStatusViewState extends State<SyncStatusView> {
-  final _dbService = DatabaseService();
+  final _repo = DataRepository();
   final _discogsService = DiscogsService();
 
   int? dbOwnedCount;
   int? dbWantedCount;
   int? discogsCount;
-  int? sheetsOwnedCount;
-  int? sheetsWantedCount;
+  int? supabaseOwnedCount;
+  int? supabaseWantedCount;
 
   List<Map<String, String>> _dbAlbums = [];
-  List<Map<String, String>> _sheetsAlbums = [];
+  List<Map<String, String>> _supabaseAlbums = [];
   List<Map<String, String>> _discogsAlbums = [];
 
   String? dbError;
   String? discogsError;
-  String? sheetsError;
+  String? supabaseError;
 
   bool isLoadingDb = true;
   bool isLoadingDiscogs = true;
-  bool isLoadingSheets = true;
+  bool isLoadingSupabase = true;
 
   @override
   void initState() {
@@ -43,7 +42,7 @@ class _SyncStatusViewState extends State<SyncStatusView> {
     await Future.wait([
       _fetchDatabaseCount(),
       _fetchDiscogsCount(),
-      _fetchSheetsCount(),
+      _fetchSupabaseCount(),
     ]);
   }
 
@@ -54,8 +53,8 @@ class _SyncStatusViewState extends State<SyncStatusView> {
     });
 
     try {
-      final owned = await _dbService.getAllOwnedAlbums();
-      final wantedCount = await _dbService.getWantedCount();
+      final owned = await _repo.getAllOwnedAlbums();
+      final wantedCount = await _repo.getWantedCount();
       setState(() {
         _dbAlbums = owned
             .map((a) => {'artist': a['artist']!, 'album': a['album']!})
@@ -101,26 +100,27 @@ class _SyncStatusViewState extends State<SyncStatusView> {
     }
   }
 
-  Future<void> _fetchSheetsCount() async {
+  Future<void> _fetchSupabaseCount() async {
     setState(() {
-      isLoadingSheets = true;
-      sheetsError = null;
+      isLoadingSupabase = true;
+      supabaseError = null;
     });
 
     try {
-      final data = await SheetsImportService.importFromSheets();
+      final owned = await _repo.getRemoteOwnedAlbums();
+      final wantedCount = await _repo.getRemoteWantedCount();
       setState(() {
-        _sheetsAlbums = data.owned
+        _supabaseAlbums = owned
             .map((a) => {'artist': a['artist']!, 'album': a['album']!})
             .toList();
-        sheetsOwnedCount = data.owned.length;
-        sheetsWantedCount = data.wanted.length;
-        isLoadingSheets = false;
+        supabaseOwnedCount = owned.length;
+        supabaseWantedCount = wantedCount;
+        isLoadingSupabase = false;
       });
     } catch (e) {
       setState(() {
-        sheetsError = e.toString();
-        isLoadingSheets = false;
+        supabaseError = e.toString();
+        isLoadingSupabase = false;
       });
     }
   }
@@ -128,19 +128,19 @@ class _SyncStatusViewState extends State<SyncStatusView> {
   bool get isInSync {
     return dbOwnedCount != null &&
         discogsCount != null &&
-        sheetsOwnedCount != null &&
+        supabaseOwnedCount != null &&
         dbOwnedCount == discogsCount &&
-        dbOwnedCount == sheetsOwnedCount;
+        dbOwnedCount == supabaseOwnedCount;
   }
 
   bool get hasAllData {
     return dbOwnedCount != null &&
         discogsCount != null &&
-        sheetsOwnedCount != null;
+        supabaseOwnedCount != null;
   }
 
   bool get isLoading {
-    return isLoadingDb || isLoadingDiscogs || isLoadingSheets;
+    return isLoadingDb || isLoadingDiscogs || isLoadingSupabase;
   }
 
   @override
@@ -182,13 +182,13 @@ class _SyncStatusViewState extends State<SyncStatusView> {
             const SizedBox(height: 12),
             _buildSourceCard(
               theme: theme,
-              icon: Icons.table_chart_rounded,
-              label: 'Google Sheets',
-              ownedCount: sheetsOwnedCount,
-              wantedCount: sheetsWantedCount,
-              isLoading: isLoadingSheets,
-              error: sheetsError,
-              onRetry: _fetchSheetsCount,
+              icon: Icons.cloud_sync_rounded,
+              label: 'Supabase',
+              ownedCount: supabaseOwnedCount,
+              wantedCount: supabaseWantedCount,
+              isLoading: isLoadingSupabase,
+              error: supabaseError,
+              onRetry: _fetchSupabaseCount,
             ),
             if (!isLoading && hasAllData) ...[
               const SizedBox(height: 24),
@@ -199,7 +199,7 @@ class _SyncStatusViewState extends State<SyncStatusView> {
                     MaterialPageRoute(
                       builder: (_) => SyncDifferencesView(
                         dbAlbums: _dbAlbums,
-                        sheetsAlbums: _sheetsAlbums,
+                        supabaseAlbums: _supabaseAlbums,
                         discogsAlbums: _discogsAlbums,
                       ),
                     ),
@@ -211,7 +211,7 @@ class _SyncStatusViewState extends State<SyncStatusView> {
             ],
             const SizedBox(height: 24),
             Text(
-              'Note: Counts may differ if recent changes haven\'t been synced. Use "Reimport from Sheets" to sync your data.',
+              'Note: Counts may differ if recent changes haven\'t been synced. Use the sync button to pull latest data from Supabase.',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               ),
@@ -393,7 +393,7 @@ class _SyncStatusViewState extends State<SyncStatusView> {
     final bool isOwnedInSync = showSyncIndicator &&
         hasAllData &&
         dbOwnedCount == discogsCount &&
-        dbOwnedCount == sheetsOwnedCount;
+        dbOwnedCount == supabaseOwnedCount;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -405,7 +405,7 @@ class _SyncStatusViewState extends State<SyncStatusView> {
         Row(
           children: [
             Text(
-              count?.toString() ?? '—',
+              count?.toString() ?? '\u2014',
               style: theme.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
               ),

@@ -30,25 +30,39 @@ flutter test test/widget_test.dart
 ## Configuration
 
 Create `lib/config.dart` from `lib/config.dart.default` and populate:
-- `spreadsheetId` - Google Sheets ID for vinyl collection data
-- `spotifyClientId` / `spotifyClientSecret` - Spotify API credentials for cover art
-- `discogsPersonalAccessToken` / `discogsUsername` - Discogs API credentials
+- `supabaseUrl` / `supabaseAnonKey` - Supabase project credentials
+- `spotifyClientId` - Spotify client ID (public; secret is in Edge Function)
+- `spotifyRedirectUri` - Spotify SDK callback URI
+- `discogsPersonalAccessToken` / `discogsUsername` - Discogs API credentials (bridge, per-user in Phase 2)
 
-Google Sheets credentials JSON goes in `assets/`.
+Supabase Edge Functions need these environment variables:
+- `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` - for the spotify-token function
 
 ## Architecture
 
-This is a Flutter app for tracking vinyl record collections. Data is stored in Google Sheets with two tabs:
-- **Owned**: columns "Artist", "Album", "Release" (date in YYYY-MM-DD format)
-- **Wanted**: columns "Artist", "Album", "Check" (value "no" means still wanted)
+This is a Flutter app for tracking vinyl record collections. Data is stored in Supabase (remote) with SQLite as a local cache.
+
+### Data Flow
+
+- **Reads**: from local SQLite (fast, offline)
+- **Writes**: to Supabase first, then update local SQLite on success
+- **Sync**: pull full dataset from Supabase, replace local data
+
+### Key Services
+
+- `lib/services/data_repository.dart` - Coordinates Supabase + SQLite cache, enforces freemium tier limits
+- `lib/services/supabase_data_service.dart` - Remote data layer wrapping Supabase client
+- `lib/services/database_service.dart` - Local SQLite cache (singleton)
+- `lib/services/auth_service.dart` - Wraps Supabase Auth (email/password, Apple Sign-In)
+- `lib/services/discogs_service.dart` - Discogs API integration (singleton)
+- `lib/services/spotify_service.dart` - Spotify SDK integration for playback control
+- `lib/api_utils.dart` - Spotify cover art fetching via Edge Function token
 
 ### Key Files
 
-- `lib/main.dart` - App entry point, theme configuration (light/dark), `SpinTrackerApp` root widget
-- `lib/vinyl_home_page.dart` - Main view with artist dropdown search, owned/wanted album lists. Initializes Google Sheets API and fetches all data
-- `lib/api_utils.dart` - Static helper for Spotify API (cover art fetching via client credentials flow)
-- `lib/services/spotify_service.dart` - Spotify SDK integration for playback control
-- `lib/services/discogs_service.dart` - Discogs API integration (singleton pattern)
+- `lib/main.dart` - App entry point, Supabase init, auth gate, theme configuration
+- `lib/vinyl_home_page.dart` - Main view with artist dropdown search, owned/wanted album lists
+- `lib/auth/login_view.dart` + `lib/auth/signup_view.dart` - Auth screens
 
 ### Views
 
@@ -57,6 +71,16 @@ This is a Flutter app for tracking vinyl record collections. Data is stored in G
 - `RandomAlbumView` - Pick random album from collection
 - `AnniversariesView` - Albums with release anniversaries today/tomorrow
 - `DiscogsCollectionView` - Browse Discogs collection with pagination
+- `SyncStatusView` - Compare counts across DB / Supabase / Discogs
+- `AddRecordView` - Add album with MusicBrainz release date lookup
+
+### Supabase Schema
+
+Tables: `profiles`, `owned_albums`, `wanted_albums` — all with RLS policies scoped to `auth.uid() = user_id`. Schema in `supabase/migrations/`.
+
+### Edge Functions
+
+- `supabase/functions/spotify-token/` - Spotify client credentials proxy (keeps secret server-side)
 
 ### Navigation
 
@@ -64,4 +88,8 @@ This is a Flutter app for tracking vinyl record collections. Data is stored in G
 
 ### State Pattern
 
-Album data is fetched once in `VinylHomePage._fetchData()` and passed down to child views. No state management library - uses StatefulWidget with setState.
+Album data is fetched once in `VinylHomePage._loadData()` and passed down to child views. No state management library - uses StatefulWidget with setState.
+
+### Freemium Tiers
+
+Free: 100 owned, 50 wanted albums. Premium: unlimited. Enforced in `DataRepository`.

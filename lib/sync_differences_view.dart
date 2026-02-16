@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 
 class SyncDifferencesView extends StatelessWidget {
   final List<Map<String, String>> dbAlbums;
-  final List<Map<String, String>> sheetsAlbums;
+  final List<Map<String, String>> supabaseAlbums;
   final List<Map<String, String>> discogsAlbums;
 
   const SyncDifferencesView({
     super.key,
     required this.dbAlbums,
-    required this.sheetsAlbums,
+    required this.supabaseAlbums,
     required this.discogsAlbums,
   });
 
@@ -44,16 +44,16 @@ class SyncDifferencesView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    final dbNotInSheets = _diff(dbAlbums, sheetsAlbums);
-    final sheetsNotInDb = _diff(sheetsAlbums, dbAlbums);
+    final dbNotInSupabase = _diff(dbAlbums, supabaseAlbums);
+    final supabaseNotInDb = _diff(supabaseAlbums, dbAlbums);
     final dbNotInDiscogs = _diff(dbAlbums, discogsAlbums);
     final discogsNotInDb = _diff(discogsAlbums, dbAlbums);
 
     final sections = <_DiffSection>[
-      if (dbNotInSheets.isNotEmpty)
-        _DiffSection('In DB but not in Sheets', dbNotInSheets, Icons.storage_rounded),
-      if (sheetsNotInDb.isNotEmpty)
-        _DiffSection('In Sheets but not in DB', sheetsNotInDb, Icons.table_chart_rounded),
+      if (dbNotInSupabase.isNotEmpty)
+        _DiffSection('In DB but not in Supabase', dbNotInSupabase, Icons.storage_rounded),
+      if (supabaseNotInDb.isNotEmpty)
+        _DiffSection('In Supabase but not in DB', supabaseNotInDb, Icons.cloud_sync_rounded),
       if (dbNotInDiscogs.isNotEmpty)
         _DiffSection('In DB but not in Discogs', dbNotInDiscogs, Icons.storage_rounded),
       if (discogsNotInDb.isNotEmpty)
@@ -117,7 +117,7 @@ class SyncDifferencesView extends StatelessWidget {
         ...section.albums.map((album) => Padding(
               padding: const EdgeInsets.only(left: 28, bottom: 4),
               child: Text(
-                '${album['artist']} — ${album['album']}',
+                '${album['artist']} \u2014 ${album['album']}',
                 style: theme.textTheme.bodyMedium,
               ),
             )),

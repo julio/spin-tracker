@@ -1,24 +1,14 @@
 // Populate fields and remove ".default" from name
 
-// googlesheet
+// supabase
+const String supabaseUrl = 'https://YOUR_PROJECT.supabase.co';
+const String supabaseAnonKey = 'YOUR_ANON_KEY';
 
-const spreadsheetId = 'SPREADSHEED_ID';
-
-// spotify
-
+// spotify (client ID is public; secret lives in Edge Function)
 const String spotifyClientId = 'SPOTIFY_CLIENT_ID';
-const String spotifyClientSecret = 'SPOTIFY_CLIENT_SECRET';
-const spotifyRedirectUri = 'spin-tracker://callback';
+const spotifyRedirectUri = 'needl://callback';
 
-// discogs
-
-const String discogsConsumerKey = 'discogsConsumerKey';
-const String discogsConsumerSecret = 'discogsConsumerSecret';
-const String discogsRequestTokenURL =
-    'https://api.discogs.com/oauth/request_token';
-const String discogsAuthorizeURL = 'https://www.discogs.com/oauth/authorize';
-const String discogsAccessTokenURL =
-    'https://api.discogs.com/oauth/access_token';
-const String discogsPersonalAccessToken =
-    'discogsPersonalAccessToken';
-const String discogsUsername = 'discogsUsername';
+// discogs (per-user in Phase 1: entered in Settings, stored in Supabase)
+// These are only used for the migration script
+const String discogsPersonalAccessToken = '';
+const String discogsUsername = '';

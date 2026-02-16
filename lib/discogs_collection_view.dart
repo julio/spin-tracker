@@ -38,7 +38,6 @@ class DiscogsCollectionViewState extends State<DiscogsCollectionView> {
 
   @override
   void initState() {
-    print('DEBUG: DiscogsCollectionView initState called');
     super.initState();
     _scrollController.addListener(_onScroll);
     _loadReleases();
@@ -46,7 +45,6 @@ class DiscogsCollectionViewState extends State<DiscogsCollectionView> {
 
   @override
   void dispose() {
-    print('DEBUG: DiscogsCollectionView dispose called');
     _scrollController.dispose();
     _isMounted = false;
     _operationVersion++;
@@ -70,7 +68,6 @@ class DiscogsCollectionViewState extends State<DiscogsCollectionView> {
     final currentVersion = _operationVersion;
 
     try {
-      print('DEBUG: Loading more releases, page: ${_currentPage + 1}');
       final releases = await _discogsService.getCollectionReleases(
         page: _currentPage + 1,
         perPage: _perPage,
@@ -85,18 +82,16 @@ class DiscogsCollectionViewState extends State<DiscogsCollectionView> {
         _isLoadingMore = false;
       });
 
-      // Load thumbnails for new items
       _loadThumbnails(currentVersion, releases.length);
     } catch (e) {
-      print('DEBUG: Error loading more releases: $e');
+      _logger.warning('Error loading more releases: $e');
       if (!_isMounted || currentVersion != _operationVersion) return;
       setState(() => _isLoadingMore = false);
     }
   }
 
   void _cancelCurrentOperation() {
-    print('DEBUG: Cancelling current operation');
-    _operationVersion++; // Increment to cancel current operation
+    _operationVersion++;
     setState(() {
       _isLoading = false;
       _isSorting = false;
@@ -105,42 +100,30 @@ class DiscogsCollectionViewState extends State<DiscogsCollectionView> {
   }
 
   Future<void> _loadReleases() async {
-    print('DEBUG: _loadReleases started');
-    if (_isLoading || _isSorting) {
-      print('DEBUG: Already loading or sorting, returning');
-      return;
-    }
+    if (_isLoading || _isSorting) return;
 
     _cancelCurrentOperation();
     final int currentVersion = _operationVersion;
 
-    print('DEBUG: Setting loading state');
     setState(() {
       _isSorting = true;
       _error = null;
       _currentPage = 1;
-      _releases = []; // Clear existing releases when sorting changes
+      _releases = [];
     });
 
     try {
-      print('DEBUG: About to call getCollectionInfo');
       if (currentVersion != _operationVersion) return;
       final collectionInfo = await _discogsService.getCollectionInfo();
-      print('DEBUG: getCollectionInfo completed');
 
-      print('DEBUG: About to call getCollectionReleases');
       if (currentVersion != _operationVersion) return;
       final releases = await _discogsService.getCollectionReleases(
         page: 1,
         perPage: _perPage,
         sortOrder: _sortOrder,
       );
-      print('DEBUG: getCollectionReleases completed');
 
-      if (!_isMounted || currentVersion != _operationVersion) {
-        print('DEBUG: Operation cancelled or widget unmounted');
-        return;
-      }
+      if (!_isMounted || currentVersion != _operationVersion) return;
 
       setState(() {
         _totalCount = collectionInfo['count'] as int;
@@ -148,7 +131,6 @@ class DiscogsCollectionViewState extends State<DiscogsCollectionView> {
         _isSorting = false;
         _isLoadingThumbnails = true;
       });
-      print('DEBUG: State updated with ${releases.length} releases');
 
       await _loadThumbnails(currentVersion, releases.length);
 
@@ -158,7 +140,6 @@ class DiscogsCollectionViewState extends State<DiscogsCollectionView> {
         });
       }
     } catch (e) {
-      print('DEBUG: Error in _loadReleases: $e');
       _logger.severe('Error loading releases: $e');
       if (!_isMounted || currentVersion != _operationVersion) return;
       setState(() {
@@ -174,13 +155,10 @@ class DiscogsCollectionViewState extends State<DiscogsCollectionView> {
 
     final releases = limit != null ? _releases.take(limit) : _releases;
     for (var release in releases) {
-      if (!_isMounted || version != _operationVersion) {
-        print('DEBUG: Thumbnail loading cancelled');
-        return;
-      }
+      if (!_isMounted || version != _operationVersion) return;
       await _discogsService.loadReleaseThumbnail(release);
       if (!_isMounted || version != _operationVersion) return;
-      setState(() {}); // Update UI for each loaded thumbnail
+      setState(() {});
     }
   }
 
