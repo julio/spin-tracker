@@ -6,9 +6,11 @@ import 'api_utils.dart';
 import 'components/bottom_nav.dart';
 import 'services/data_repository.dart';
 import 'services/discogs_service.dart';
+import 'services/discogs_auth_service.dart';
 import 'add_record_view.dart';
 import 'discogs_search_sheet.dart';
 import 'sync_status_view.dart';
+import 'settings_view.dart';
 import 'services/auth_service.dart';
 
 final _logger = Logger('VinylHomePage');
@@ -229,6 +231,7 @@ class VinylHomePageState extends State<VinylHomePage> {
 
   Future<void> _showOwnedAlbumActions(BuildContext ctx, Map<String, String> album) async {
     final hasDiscogs = _hasDiscogsId(album);
+    final isDiscogsConnected = DiscogsAuthService().connectedUsername.value != null;
 
     final action = await showModalBottomSheet<String>(
       context: ctx,
@@ -250,7 +253,7 @@ class VinylHomePageState extends State<VinylHomePage> {
                 ),
               ),
               const Divider(height: 1),
-              if (!hasDiscogs)
+              if (!hasDiscogs && isDiscogsConnected)
                 ListTile(
                   leading: const Icon(Icons.add_circle_outline),
                   title: const Text('Add to Discogs'),
@@ -260,12 +263,12 @@ class VinylHomePageState extends State<VinylHomePage> {
                 leading: Icon(Icons.delete_outline,
                     color: theme.colorScheme.error),
                 title: Text(
-                  hasDiscogs ? 'Delete from app only' : 'Delete',
+                  hasDiscogs && isDiscogsConnected ? 'Delete from app only' : 'Delete',
                   style: TextStyle(color: theme.colorScheme.error),
                 ),
                 onTap: () => Navigator.pop(context, 'delete_app'),
               ),
-              if (hasDiscogs)
+              if (hasDiscogs && isDiscogsConnected)
                 ListTile(
                   leading: Icon(Icons.delete_forever,
                       color: theme.colorScheme.error),
@@ -403,6 +406,11 @@ class VinylHomePageState extends State<VinylHomePage> {
                     getOwnedAlbums(selectedArtist!.toLowerCase());
                   }
                 });
+              } else if (value == 'settings') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsView()),
+                );
               } else if (value == 'sign_out') {
                 _signOut();
               }
@@ -417,6 +425,10 @@ class VinylHomePageState extends State<VinylHomePage> {
                 child: Text('Sort by Artist/Album'),
               ),
               const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: 'settings',
+                child: Text('Settings'),
+              ),
               const PopupMenuItem(
                 value: 'sign_out',
                 child: Text('Sign Out'),

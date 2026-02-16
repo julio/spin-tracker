@@ -1,37 +1,65 @@
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:logging/logging.dart';
-import '../config.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'discogs_auth_service.dart';
 
 class DiscogsService {
   static final DiscogsService _instance = DiscogsService._internal();
   final _logger = Logger('DiscogsService');
-  static const _timeout = Duration(seconds: 10);
 
   factory DiscogsService() => _instance;
   DiscogsService._internal();
 
-  Map<String, String> get _headers => {
-    'Authorization': 'Discogs token=$discogsPersonalAccessToken',
-    'User-Agent': 'Needl/1.0',
-  };
+  String? _cachedUsername;
+
+  Future<String> _getUsername() async {
+    _cachedUsername ??= await DiscogsAuthService().getConnectedUsername();
+    if (_cachedUsername == null || _cachedUsername!.isEmpty) {
+      throw Exception('Discogs account not connected');
+    }
+    return _cachedUsername!;
+  }
+
+  /// Clears cached username (call when user disconnects).
+  void clearUsernameCache() {
+    _cachedUsername = null;
+  }
+
+  Future<Map<String, dynamic>> _proxyRequest(
+    String method,
+    String path, [
+    String? query,
+  ]) async {
+    final response = await Supabase.instance.client.functions.invoke(
+      'discogs-api',
+      body: {
+        'method': method,
+        'path': path,
+        if (query != null) 'query': query,
+      },
+    );
+
+    if (response.status != 200) {
+      final error = response.data is Map
+          ? response.data['error'] ?? 'Request failed'
+          : 'Request failed with status ${response.status}';
+      throw Exception(error);
+    }
+
+    final data = response.data;
+    if (data is String) {
+      return jsonDecode(data) as Map<String, dynamic>;
+    }
+    return data as Map<String, dynamic>;
+  }
 
   Future<Map<String, dynamic>> getCollectionInfo() async {
     try {
-      final response = await http
-          .get(
-            Uri.parse(
-              'https://api.discogs.com/users/$discogsUsername/collection/folders/0',
-            ),
-            headers: _headers,
-          )
-          .timeout(_timeout);
-
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      } else {
-        throw Exception('Failed to get collection info: ${response.statusCode}');
-      }
+      final username = await _getUsername();
+      return await _proxyRequest(
+        'GET',
+        '/users/$username/collection/folders/0',
+      );
     } catch (e) {
       _logger.severe('Error getting collection info: $e');
       rethrow;
@@ -45,19 +73,13 @@ class DiscogsService {
     String sortOrder = 'desc',
   }) async {
     try {
-      final url =
-          'https://api.discogs.com/users/$discogsUsername/collection/folders/0/releases?page=$page&per_page=$perPage&sort=$sort&sort_order=$sortOrder';
-
-      final response = await http
-          .get(Uri.parse(url), headers: _headers)
-          .timeout(_timeout);
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return List<Map<String, dynamic>>.from(data['releases']);
-      } else {
-        throw Exception('Failed to get collection releases: ${response.statusCode}');
-      }
+      final username = await _getUsername();
+      final data = await _proxyRequest(
+        'GET',
+        '/users/$username/collection/folders/0/releases',
+        'page=$page&per_page=$perPage&sort=$sort&sort_order=$sortOrder',
+      );
+      return List<Map<String, dynamic>>.from(data['releases']);
     } catch (e) {
       _logger.severe('Error getting collection releases: $e');
       rethrow;
@@ -83,19 +105,7 @@ class DiscogsService {
 
   Future<Map<String, dynamic>?> getReleaseDetails(int releaseId) async {
     try {
-      final response = await http
-          .get(
-            Uri.parse('https://api.discogs.com/releases/$releaseId'),
-            headers: _headers,
-          )
-          .timeout(_timeout);
-
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      } else {
-        _logger.warning('Failed to get release details: ${response.statusCode}');
-        return null;
-      }
+      return await _proxyRequest('GET', '/releases/$releaseId');
     } catch (e) {
       _logger.severe('Error getting release details: $e');
       return null;
@@ -104,22 +114,16 @@ class DiscogsService {
 
   Future<List<Map<String, dynamic>>> _doSearch(
       Map<String, String> queryParams) async {
-    final uri = Uri.https('api.discogs.com', '/database/search', queryParams);
-    final response =
-        await http.get(uri, headers: _headers).timeout(_timeout);
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return List<Map<String, dynamic>>.from(data['results'] ?? []);
-    } else {
-      _logger.warning('Search failed: ${response.statusCode}');
-      throw Exception('Search failed: ${response.statusCode}');
-    }
+    final queryString = queryParams.entries
+        .map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
+        .join('&');
+    final data = await _proxyRequest('GET', '/database/search', queryString);
+    return List<Map<String, dynamic>>.from(data['results'] ?? []);
   }
 
   bool _isVinyl(Map<String, dynamic> result) {
     final formats = result['format'] as List? ?? [];
-    return formats.any((f) =>
-        f.toString().toLowerCase() == 'vinyl');
+    return formats.any((f) => f.toString().toLowerCase() == 'vinyl');
   }
 
   Future<List<Map<String, dynamic>>> searchReleases({
@@ -168,17 +172,19 @@ class DiscogsService {
 
   Future<int?> addToCollection(int releaseId) async {
     try {
-      final response = await http
-          .post(
-            Uri.parse(
-              'https://api.discogs.com/users/$discogsUsername/collection/folders/1/releases/$releaseId',
-            ),
-            headers: _headers,
-          )
-          .timeout(_timeout);
+      final username = await _getUsername();
+      final response = await Supabase.instance.client.functions.invoke(
+        'discogs-api',
+        body: {
+          'method': 'POST',
+          'path': '/users/$username/collection/folders/1/releases/$releaseId',
+        },
+      );
 
-      if (response.statusCode == 201) {
-        final data = jsonDecode(response.body);
+      if (response.status == 201 || response.status == 200) {
+        final data = response.data is String
+            ? jsonDecode(response.data)
+            : response.data;
         final instanceId = data['instance_id'];
         if (instanceId is int) {
           _logger.info('Added release $releaseId to collection (instance: $instanceId)');
@@ -186,7 +192,7 @@ class DiscogsService {
         }
         return -1;
       } else {
-        _logger.warning('Failed to add to collection: ${response.statusCode}');
+        _logger.warning('Failed to add to collection: ${response.status}');
         return null;
       }
     } catch (e) {
@@ -197,20 +203,20 @@ class DiscogsService {
 
   Future<bool> removeFromCollection(int releaseId, int instanceId) async {
     try {
-      final response = await http
-          .delete(
-            Uri.parse(
-              'https://api.discogs.com/users/$discogsUsername/collection/folders/1/releases/$releaseId/instances/$instanceId',
-            ),
-            headers: _headers,
-          )
-          .timeout(_timeout);
+      final username = await _getUsername();
+      final response = await Supabase.instance.client.functions.invoke(
+        'discogs-api',
+        body: {
+          'method': 'DELETE',
+          'path': '/users/$username/collection/folders/1/releases/$releaseId/instances/$instanceId',
+        },
+      );
 
-      if (response.statusCode == 204) {
+      if (response.status == 204 || response.status == 200) {
         _logger.info('Removed release $releaseId instance $instanceId');
         return true;
       } else {
-        _logger.warning('Failed to remove from collection: ${response.statusCode}');
+        _logger.warning('Failed to remove from collection: ${response.status}');
         return false;
       }
     } catch (e) {

@@ -49,6 +49,9 @@ dependencies:
   path_provider: ^2.1.5
   path: ^1.9.1
 
+  # Deep linking
+  app_links: ^6.0.0
+
   # Spotify integration
   spotify_sdk: ^2.3.1
   url_launcher: ^6.2.5

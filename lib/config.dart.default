@@ -8,7 +8,3 @@ const String supabaseAnonKey = 'YOUR_ANON_KEY';
 const String spotifyClientId = 'SPOTIFY_CLIENT_ID';
 const spotifyRedirectUri = 'needl://callback';
 
-// discogs (per-user in Phase 1: entered in Settings, stored in Supabase)
-// These are only used for the migration script
-const String discogsPersonalAccessToken = '';
-const String discogsUsername = '';
