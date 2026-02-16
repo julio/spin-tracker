@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'data_repository.dart';
 
 class DiscogsAuthService {
   static final DiscogsAuthService _instance = DiscogsAuthService._internal();
@@ -43,7 +44,15 @@ class DiscogsAuthService {
   }
 
   /// Starts the OAuth 1.0a flow: calls Edge Function, opens browser.
+  /// Requires premium tier.
   Future<void> startOAuthFlow() async {
+    final currentTier = await DataRepository().tier;
+    if (currentTier != 'premium') {
+      throw Exception(
+        'Discogs integration is a Premium feature. Upgrade to connect your Discogs account.',
+      );
+    }
+
     try {
       final response = await Supabase.instance.client.functions.invoke(
         'discogs-request-token',
