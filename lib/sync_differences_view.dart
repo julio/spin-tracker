@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 
 class SyncDifferencesView extends StatelessWidget {
-  final List<Map<String, String>> dbAlbums;
-  final List<Map<String, String>> supabaseAlbums;
+  final List<Map<String, String>> needlAlbums;
   final List<Map<String, String>> discogsAlbums;
 
   const SyncDifferencesView({
     super.key,
-    required this.dbAlbums,
-    required this.supabaseAlbums,
+    required this.needlAlbums,
     required this.discogsAlbums,
   });
 
@@ -44,20 +42,14 @@ class SyncDifferencesView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    final dbNotInSupabase = _diff(dbAlbums, supabaseAlbums);
-    final supabaseNotInDb = _diff(supabaseAlbums, dbAlbums);
-    final dbNotInDiscogs = _diff(dbAlbums, discogsAlbums);
-    final discogsNotInDb = _diff(discogsAlbums, dbAlbums);
+    final needlNotInDiscogs = _diff(needlAlbums, discogsAlbums);
+    final discogsNotInNeedl = _diff(discogsAlbums, needlAlbums);
 
     final sections = <_DiffSection>[
-      if (dbNotInSupabase.isNotEmpty)
-        _DiffSection('In DB but not in Supabase', dbNotInSupabase, Icons.storage_rounded),
-      if (supabaseNotInDb.isNotEmpty)
-        _DiffSection('In Supabase but not in DB', supabaseNotInDb, Icons.cloud_sync_rounded),
-      if (dbNotInDiscogs.isNotEmpty)
-        _DiffSection('In DB but not in Discogs', dbNotInDiscogs, Icons.storage_rounded),
-      if (discogsNotInDb.isNotEmpty)
-        _DiffSection('In Discogs but not in DB', discogsNotInDb, Icons.cloud_rounded),
+      if (needlNotInDiscogs.isNotEmpty)
+        _DiffSection('In Needl but not in Discogs', needlNotInDiscogs, Icons.cloud_sync_rounded),
+      if (discogsNotInNeedl.isNotEmpty)
+        _DiffSection('In Discogs but not in Needl', discogsNotInNeedl, Icons.cloud_rounded),
     ];
 
     return Scaffold(

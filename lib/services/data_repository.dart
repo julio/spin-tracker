@@ -1,10 +1,10 @@
 import 'package:logging/logging.dart';
-import 'database_service.dart';
 import 'supabase_data_service.dart';
+import 'snapshot_service.dart';
 import 'auth_service.dart';
 
-/// Coordinates Supabase (remote) and SQLite (local cache).
-/// Reads from local cache, writes to Supabase first then updates cache.
+/// Coordinates Supabase (primary) with in-memory cache and JSON offline snapshot.
+/// Reads from in-memory cache. Writes to Supabase, then refreshes cache.
 /// Enforces freemium tier limits.
 class DataRepository {
   static final DataRepository _instance = DataRepository._internal();
@@ -13,10 +13,19 @@ class DataRepository {
 
   final _logger = Logger('DataRepository');
   final _remote = SupabaseDataService();
-  final _local = DatabaseService();
+  final _snapshot = SnapshotService();
   final _auth = AuthService();
 
   String? _cachedTier;
+
+  // --- In-memory cache ---
+  List<Map<String, String>> _ownedAlbums = [];
+  List<Map<String, String>> _wantedAlbums = [];
+  bool _isLoaded = false;
+  bool _isOffline = false;
+
+  bool get isOffline => _isOffline;
+  bool get isLoaded => _isLoaded;
 
   // --- Tier ---
 
@@ -32,20 +41,54 @@ class DataRepository {
   static const int freeOwnedLimit = 100;
   static const int freeWantedLimit = 50;
 
-  // --- Read (from local cache) ---
+  // --- Read (from in-memory cache) ---
 
-  Future<bool> hasData() => _local.hasData();
+  Future<List<Map<String, String>>> getAllOwnedAlbums() async => _ownedAlbums;
 
-  Future<List<Map<String, String>>> getAllOwnedAlbums() =>
-      _local.getAllOwnedAlbums();
+  Future<List<Map<String, String>>> getAllWantedAlbums() async => _wantedAlbums;
 
-  Future<List<Map<String, String>>> getAllWantedAlbums() =>
-      _local.getAllWantedAlbums();
+  Future<int> getOwnedCount() async => _ownedAlbums.length;
+  Future<int> getWantedCount() async => _wantedAlbums.length;
 
-  Future<int> getOwnedCount() => _local.getOwnedCount();
-  Future<int> getWantedCount() => _local.getWantedCount();
+  // --- Initial Load ---
 
-  // --- Write (Supabase first, then local) ---
+  /// Called on app start. Tries Supabase first; falls back to snapshot.
+  Future<void> loadData() async {
+    try {
+      await _fetchFromRemote();
+      _isOffline = false;
+      // Clean up old SQLite database if it exists
+      _snapshot.deleteOldDatabase();
+    } catch (e) {
+      _logger.warning('Supabase unreachable, falling back to snapshot: $e');
+      final snapshot = await _snapshot.load();
+      if (snapshot != null) {
+        _ownedAlbums = snapshot.owned;
+        _wantedAlbums = snapshot.wanted;
+        _isLoaded = true;
+        _isOffline = true;
+      } else {
+        _logger.severe('No snapshot available and Supabase is unreachable');
+        _isLoaded = false;
+        _isOffline = true;
+      }
+    }
+  }
+
+  /// Fetches from Supabase, updates in-memory cache and snapshot.
+  Future<void> _fetchFromRemote() async {
+    _logger.info('Fetching data from Supabase...');
+    final owned = await _remote.getAllOwnedAlbums();
+    final wanted = await _remote.getAllWantedAlbums();
+    _ownedAlbums = owned;
+    _wantedAlbums = wanted;
+    _isLoaded = true;
+    _logger.info('Loaded: ${owned.length} owned, ${wanted.length} wanted');
+    // Persist snapshot in background (fire-and-forget)
+    _snapshot.save(owned: owned, wanted: wanted);
+  }
+
+  // --- Write (Supabase only, then refresh cache) ---
 
   Future<void> addOwnedAlbum({
     required String artist,
@@ -73,14 +116,7 @@ class DataRepository {
       discogsId: discogsId,
       discogsInstanceId: discogsInstanceId,
     );
-    await _local.addOwnedAlbum(
-      artist: artist,
-      album: album,
-      releaseDate: releaseDate,
-      acquiredAt: acquiredAt,
-      discogsId: discogsId,
-      discogsInstanceId: discogsInstanceId,
-    );
+    await _fetchFromRemote();
   }
 
   Future<void> addWantedAlbum({
@@ -98,7 +134,7 @@ class DataRepository {
     }
 
     await _remote.addWantedAlbum(artist: artist, album: album);
-    await _local.importWantedAlbums([{'artist': artist, 'album': album}]);
+    await _fetchFromRemote();
   }
 
   Future<void> updateDiscogsId({
@@ -115,13 +151,7 @@ class DataRepository {
       discogsId: discogsId,
       discogsInstanceId: discogsInstanceId,
     );
-    await _local.updateDiscogsId(
-      artist: artist,
-      album: album,
-      releaseDate: releaseDate,
-      discogsId: discogsId,
-      discogsInstanceId: discogsInstanceId,
-    );
+    await _fetchFromRemote();
   }
 
   Future<void> deleteOwnedAlbum({
@@ -134,11 +164,7 @@ class DataRepository {
       album: album,
       releaseDate: releaseDate,
     );
-    await _local.deleteOwnedAlbum(
-      artist: artist,
-      album: album,
-      releaseDate: releaseDate,
-    );
+    await _fetchFromRemote();
   }
 
   Future<void> deleteWantedAlbum({
@@ -146,20 +172,14 @@ class DataRepository {
     required String album,
   }) async {
     await _remote.deleteWantedAlbum(artist: artist, album: album);
-    await _local.deleteWantedAlbum(artist: artist, album: album);
+    await _fetchFromRemote();
   }
 
-  // --- Sync: pull from Supabase, replace local cache ---
+  // --- Sync (refresh from Supabase) ---
 
   Future<void> syncFromRemote() async {
-    _logger.info('Starting sync from Supabase...');
-    final owned = await _remote.getAllOwnedAlbums();
-    final wanted = await _remote.getAllWantedAlbums();
-
-    await _local.clearAll();
-    await _local.importOwnedAlbums(owned);
-    await _local.importWantedAlbums(wanted);
-    _logger.info('Sync complete: ${owned.length} owned, ${wanted.length} wanted');
+    await _fetchFromRemote();
+    _isOffline = false;
   }
 
   // --- Remote counts (for sync status) ---
@@ -172,4 +192,14 @@ class DataRepository {
 
   Future<List<Map<String, String>>> getRemoteWantedAlbums() =>
       _remote.getAllWantedAlbums();
+
+  /// Clears in-memory cache and snapshot (call on sign-out).
+  void clearAll() {
+    _ownedAlbums = [];
+    _wantedAlbums = [];
+    _isLoaded = false;
+    _isOffline = false;
+    _cachedTier = null;
+    _snapshot.clear();
+  }
 }

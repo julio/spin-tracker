@@ -53,11 +53,8 @@ class VinylHomePageState extends State<VinylHomePage> {
   Future<void> _loadData() async {
     setState(() => isLoading = true);
     try {
-      final hasData = await _repo.hasData();
-      if (!hasData) {
-        await _repo.syncFromRemote();
-      }
-      await _loadFromDatabase();
+      await _repo.loadData();
+      await _refreshFromCache();
     } catch (e) {
       _logger.severe('Error loading data: $e');
     } finally {
@@ -69,7 +66,7 @@ class VinylHomePageState extends State<VinylHomePage> {
     setState(() => isLoading = true);
     try {
       await _repo.syncFromRemote();
-      await _loadFromDatabase();
+      await _refreshFromCache();
     } catch (e) {
       _logger.severe('Error syncing: $e');
       if (mounted) {
@@ -82,7 +79,7 @@ class VinylHomePageState extends State<VinylHomePage> {
     }
   }
 
-  Future<void> _loadFromDatabase() async {
+  Future<void> _refreshFromCache() async {
     _allOwnedAlbums = await _repo.getAllOwnedAlbums();
     _allWantedAlbums = await _repo.getAllWantedAlbums();
 
@@ -293,14 +290,14 @@ class VinylHomePageState extends State<VinylHomePage> {
         album: album['album']!,
         releaseDate: album['release'] ?? '',
       );
-      if (added == true) await _loadFromDatabase();
+      if (added == true) await _refreshFromCache();
     } else if (action == 'delete_app') {
       await _repo.deleteOwnedAlbum(
         artist: album['artist']!,
         album: album['album']!,
         releaseDate: album['release'] ?? '',
       );
-      await _loadFromDatabase();
+      await _refreshFromCache();
     } else if (action == 'delete_both') {
       final discogsId = int.tryParse(album['discogs_id'] ?? '');
       final instanceId = int.tryParse(album['discogs_instance_id'] ?? '');
@@ -312,7 +309,7 @@ class VinylHomePageState extends State<VinylHomePage> {
         album: album['album']!,
         releaseDate: album['release'] ?? '',
       );
-      await _loadFromDatabase();
+      await _refreshFromCache();
     }
   }
 
@@ -337,11 +334,12 @@ class VinylHomePageState extends State<VinylHomePage> {
         artist: album['artist']!,
         album: album['album']!,
       );
-      await _loadFromDatabase();
+      await _refreshFromCache();
     }
   }
 
   Future<void> _signOut() async {
+    DataRepository().clearAll();
     await AuthService().signOut();
   }
 
@@ -369,15 +367,15 @@ class VinylHomePageState extends State<VinylHomePage> {
                 MaterialPageRoute(builder: (_) => const AddRecordView()),
               );
               if (added == true) {
-                await _loadFromDatabase();
+                await _refreshFromCache();
               }
             },
             tooltip: 'Add Record',
           ),
           IconButton(
-            icon: const Icon(Icons.sync_rounded),
+            icon: const Icon(Icons.refresh_rounded),
             onPressed: isLoading ? null : _syncFromRemote,
-            tooltip: 'Sync from Supabase',
+            tooltip: 'Refresh',
           ),
           IconButton(
             icon: const Icon(Icons.analytics_rounded),

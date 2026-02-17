@@ -15,23 +15,18 @@ class _SyncStatusViewState extends State<SyncStatusView> {
   final _repo = DataRepository();
   final _discogsService = DiscogsService();
 
-  int? dbOwnedCount;
-  int? dbWantedCount;
+  int? needlOwnedCount;
+  int? needlWantedCount;
   int? discogsCount;
-  int? supabaseOwnedCount;
-  int? supabaseWantedCount;
 
-  List<Map<String, String>> _dbAlbums = [];
-  List<Map<String, String>> _supabaseAlbums = [];
+  List<Map<String, String>> _needlAlbums = [];
   List<Map<String, String>> _discogsAlbums = [];
 
-  String? dbError;
+  String? needlError;
   String? discogsError;
-  String? supabaseError;
 
-  bool isLoadingDb = true;
+  bool isLoadingNeedl = true;
   bool isLoadingDiscogs = true;
-  bool isLoadingSupabase = true;
 
   bool get _isDiscogsConnected =>
       DiscogsAuthService().connectedUsername.value != null;
@@ -44,8 +39,7 @@ class _SyncStatusViewState extends State<SyncStatusView> {
 
   Future<void> _fetchAllCounts() async {
     final futures = <Future>[
-      _fetchDatabaseCount(),
-      _fetchSupabaseCount(),
+      _fetchNeedlCount(),
     ];
     if (_isDiscogsConnected) {
       futures.add(_fetchDiscogsCount());
@@ -58,27 +52,27 @@ class _SyncStatusViewState extends State<SyncStatusView> {
     await Future.wait(futures);
   }
 
-  Future<void> _fetchDatabaseCount() async {
+  Future<void> _fetchNeedlCount() async {
     setState(() {
-      isLoadingDb = true;
-      dbError = null;
+      isLoadingNeedl = true;
+      needlError = null;
     });
 
     try {
-      final owned = await _repo.getAllOwnedAlbums();
-      final wantedCount = await _repo.getWantedCount();
+      final owned = await _repo.getRemoteOwnedAlbums();
+      final wantedCount = await _repo.getRemoteWantedCount();
       setState(() {
-        _dbAlbums = owned
+        _needlAlbums = owned
             .map((a) => {'artist': a['artist']!, 'album': a['album']!})
             .toList();
-        dbOwnedCount = owned.length;
-        dbWantedCount = wantedCount;
-        isLoadingDb = false;
+        needlOwnedCount = owned.length;
+        needlWantedCount = wantedCount;
+        isLoadingNeedl = false;
       });
     } catch (e) {
       setState(() {
-        dbError = e.toString();
-        isLoadingDb = false;
+        needlError = e.toString();
+        isLoadingNeedl = false;
       });
     }
   }
@@ -112,55 +106,20 @@ class _SyncStatusViewState extends State<SyncStatusView> {
     }
   }
 
-  Future<void> _fetchSupabaseCount() async {
-    setState(() {
-      isLoadingSupabase = true;
-      supabaseError = null;
-    });
-
-    try {
-      final owned = await _repo.getRemoteOwnedAlbums();
-      final wantedCount = await _repo.getRemoteWantedCount();
-      setState(() {
-        _supabaseAlbums = owned
-            .map((a) => {'artist': a['artist']!, 'album': a['album']!})
-            .toList();
-        supabaseOwnedCount = owned.length;
-        supabaseWantedCount = wantedCount;
-        isLoadingSupabase = false;
-      });
-    } catch (e) {
-      setState(() {
-        supabaseError = e.toString();
-        isLoadingSupabase = false;
-      });
-    }
-  }
-
   bool get isInSync {
-    if (!_isDiscogsConnected) {
-      return dbOwnedCount != null &&
-          supabaseOwnedCount != null &&
-          dbOwnedCount == supabaseOwnedCount;
-    }
-    return dbOwnedCount != null &&
+    if (!_isDiscogsConnected) return needlOwnedCount != null;
+    return needlOwnedCount != null &&
         discogsCount != null &&
-        supabaseOwnedCount != null &&
-        dbOwnedCount == discogsCount &&
-        dbOwnedCount == supabaseOwnedCount;
+        needlOwnedCount == discogsCount;
   }
 
   bool get hasAllData {
-    if (!_isDiscogsConnected) {
-      return dbOwnedCount != null && supabaseOwnedCount != null;
-    }
-    return dbOwnedCount != null &&
-        discogsCount != null &&
-        supabaseOwnedCount != null;
+    if (!_isDiscogsConnected) return needlOwnedCount != null;
+    return needlOwnedCount != null && discogsCount != null;
   }
 
   bool get isLoading {
-    return isLoadingDb || isLoadingDiscogs || isLoadingSupabase;
+    return isLoadingNeedl || isLoadingDiscogs;
   }
 
   @override
@@ -180,13 +139,13 @@ class _SyncStatusViewState extends State<SyncStatusView> {
             const SizedBox(height: 16),
             _buildSourceCard(
               theme: theme,
-              icon: Icons.storage_rounded,
-              label: 'Local Database',
-              ownedCount: dbOwnedCount,
-              wantedCount: dbWantedCount,
-              isLoading: isLoadingDb,
-              error: dbError,
-              onRetry: _fetchDatabaseCount,
+              icon: Icons.cloud_sync_rounded,
+              label: 'Needl',
+              ownedCount: needlOwnedCount,
+              wantedCount: needlWantedCount,
+              isLoading: isLoadingNeedl,
+              error: needlError,
+              onRetry: _fetchNeedlCount,
             ),
             const SizedBox(height: 12),
             _buildSourceCard(
@@ -199,18 +158,7 @@ class _SyncStatusViewState extends State<SyncStatusView> {
               error: discogsError,
               onRetry: _fetchDiscogsCount,
             ),
-            const SizedBox(height: 12),
-            _buildSourceCard(
-              theme: theme,
-              icon: Icons.cloud_sync_rounded,
-              label: 'Supabase',
-              ownedCount: supabaseOwnedCount,
-              wantedCount: supabaseWantedCount,
-              isLoading: isLoadingSupabase,
-              error: supabaseError,
-              onRetry: _fetchSupabaseCount,
-            ),
-            if (!isLoading && hasAllData) ...[
+            if (!isLoading && hasAllData && _isDiscogsConnected) ...[
               const SizedBox(height: 24),
               FilledButton.icon(
                 onPressed: () {
@@ -218,8 +166,7 @@ class _SyncStatusViewState extends State<SyncStatusView> {
                     context,
                     MaterialPageRoute(
                       builder: (_) => SyncDifferencesView(
-                        dbAlbums: _dbAlbums,
-                        supabaseAlbums: _supabaseAlbums,
+                        needlAlbums: _needlAlbums,
                         discogsAlbums: _discogsAlbums,
                       ),
                     ),
@@ -231,7 +178,7 @@ class _SyncStatusViewState extends State<SyncStatusView> {
             ],
             const SizedBox(height: 24),
             Text(
-              'Note: Counts may differ if recent changes haven\'t been synced. Use the sync button to pull latest data from Supabase.',
+              'Compares your Needl collection with Discogs. Use the refresh button to pull latest data.',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               ),
@@ -263,7 +210,7 @@ class _SyncStatusViewState extends State<SyncStatusView> {
       statusColor = theme.colorScheme.primary;
       statusIcon = Icons.check_circle_rounded;
       statusText = 'All Sources In Sync';
-      detailText = '${dbOwnedCount ?? 0} owned records across all sources';
+      detailText = '${needlOwnedCount ?? 0} owned records across all sources';
     } else {
       statusColor = Colors.orange;
       statusIcon = Icons.warning_rounded;
@@ -412,8 +359,7 @@ class _SyncStatusViewState extends State<SyncStatusView> {
   }) {
     final bool isOwnedInSync = showSyncIndicator &&
         hasAllData &&
-        dbOwnedCount == discogsCount &&
-        dbOwnedCount == supabaseOwnedCount;
+        needlOwnedCount == discogsCount;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -430,7 +376,7 @@ class _SyncStatusViewState extends State<SyncStatusView> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            if (showSyncIndicator && hasAllData) ...[
+            if (showSyncIndicator && hasAllData && _isDiscogsConnected) ...[
               const SizedBox(width: 8),
               Icon(
                 isOwnedInSync
