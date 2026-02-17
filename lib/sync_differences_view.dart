@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'utils/album_diff.dart';
 
 class SyncDifferencesView extends StatelessWidget {
   final List<Map<String, String>> needlAlbums;
@@ -10,40 +11,12 @@ class SyncDifferencesView extends StatelessWidget {
     required this.discogsAlbums,
   });
 
-  static String _normalize(String s) {
-    var n = s.toLowerCase();
-    // Strip Discogs disambiguation like "(2)", "(3)", etc.
-    n = n.replaceAll(RegExp(r'\s*\(\d+\)\s*$'), '');
-    // Strip leading "the "
-    n = n.replaceAll(RegExp(r'^the\s+'), '');
-    // Replace common accented characters with base letters
-    const from = 'àáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ';
-    const to   = 'aaaaaaaceeeeiiiidnoooooouuuuyby';
-    for (var i = 0; i < from.length; i++) {
-      n = n.replaceAll(from[i], to[i]);
-    }
-    // Strip all non-alphanumeric (handles punctuation differences)
-    n = n.replaceAll(RegExp(r'[^a-z0-9]'), '');
-    return n;
-  }
-
-  static String _key(Map<String, String> album) =>
-      '${_normalize(album['artist']!)}|${_normalize(album['album']!)}';
-
-  static List<Map<String, String>> _diff(
-    List<Map<String, String>> source,
-    List<Map<String, String>> other,
-  ) {
-    final otherKeys = other.map(_key).toSet();
-    return source.where((a) => !otherKeys.contains(_key(a))).toList();
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    final needlNotInDiscogs = _diff(needlAlbums, discogsAlbums);
-    final discogsNotInNeedl = _diff(discogsAlbums, needlAlbums);
+    final needlNotInDiscogs = AlbumDiff.diff(needlAlbums, discogsAlbums);
+    final discogsNotInNeedl = AlbumDiff.diff(discogsAlbums, needlAlbums);
 
     final sections = <_DiffSection>[
       if (needlNotInDiscogs.isNotEmpty)

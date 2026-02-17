@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
 import 'supabase_data_service.dart';
 import 'snapshot_service.dart';
@@ -7,14 +8,27 @@ import 'auth_service.dart';
 /// Reads from in-memory cache. Writes to Supabase, then refreshes cache.
 /// Enforces freemium tier limits.
 class DataRepository {
-  static final DataRepository _instance = DataRepository._internal();
+  static final DataRepository _instance = DataRepository._();
   factory DataRepository() => _instance;
-  DataRepository._internal();
+
+  DataRepository._()
+      : _remote = SupabaseDataService(),
+        _snapshot = SnapshotService(),
+        _auth = AuthService();
+
+  @visibleForTesting
+  DataRepository.forTesting({
+    required SupabaseDataService remote,
+    required SnapshotService snapshot,
+    required AuthService auth,
+  })  : _remote = remote,
+        _snapshot = snapshot,
+        _auth = auth;
 
   final _logger = Logger('DataRepository');
-  final _remote = SupabaseDataService();
-  final _snapshot = SnapshotService();
-  final _auth = AuthService();
+  final SupabaseDataService _remote;
+  final SnapshotService _snapshot;
+  final AuthService _auth;
 
   String? _cachedTier;
 
