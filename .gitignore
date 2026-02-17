@@ -48,6 +48,11 @@ app.*.map.json
 assets/vinylcollection-451818-1e41b0728e29.json
 lib/config.dart
 
+# Generated/temp
+coverage/
+output/
+tmp/
+
 # Flutter build outputs
 build/
 *.g.dart
