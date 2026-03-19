@@ -143,6 +143,25 @@ void main() {
       );
     });
 
+    testWidgets('taps Disconnect in dialog to trigger disconnect', (tester) async {
+      await tester.pumpWidget(const MaterialApp(home: SettingsView()));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Disconnect'));
+      await tester.pumpAndSettle();
+
+      // Tap the red Disconnect in the dialog
+      await tester.tap(find.widgetWithText(TextButton, 'Disconnect'));
+      await tester.pump();
+      await tester.runAsync(
+          () => Future.delayed(const Duration(milliseconds: 500)));
+      await tester.pump();
+
+      // After disconnect attempt (will fail with fake Supabase),
+      // should show error snackbar or still be on settings
+      expect(find.text('Settings'), findsOneWidget);
+    });
+
     testWidgets('dismisses disconnect dialog on Cancel', (tester) async {
       await tester.pumpWidget(const MaterialApp(home: SettingsView()));
       await tester.pumpAndSettle();

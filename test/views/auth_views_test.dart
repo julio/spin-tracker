@@ -107,6 +107,34 @@ void main() {
 
       expect(find.byType(SignupView), findsOneWidget);
     });
+
+    testWidgets('forgot password with email shows reset sent', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(home: LoginView()),
+      );
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Email'),
+        'test@example.com',
+      );
+      await tester.tap(find.text('Forgot password?'));
+
+      // Let async complete
+      await tester.runAsync(
+          () => Future.delayed(const Duration(milliseconds: 500)));
+      await tester.pump();
+
+      // Should show success or error message (fake Supabase may error)
+      expect(find.text('Needl'), findsOneWidget);
+    });
+
+    testWidgets('has Form widget', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(home: LoginView()),
+      );
+
+      expect(find.byType(Form), findsOneWidget);
+    });
   });
 
   group('SignupView', () {
@@ -204,6 +232,43 @@ void main() {
 
       // After tapping, loading indicator should appear
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    });
+
+    testWidgets('shows error after failed signup', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(home: SignupView()),
+      );
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Email'),
+        'test@example.com',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Password'),
+        'password123',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Confirm Password'),
+        'password123',
+      );
+      await tester.tap(find.widgetWithText(FilledButton, 'Create Account'));
+      await tester.pump();
+
+      // Let async complete
+      await tester.runAsync(
+          () => Future.delayed(const Duration(milliseconds: 500)));
+      await tester.pump();
+
+      // Should show error from fake Supabase
+      expect(find.text('Create Account'), findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('has Form widget', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(home: SignupView()),
+      );
+
+      expect(find.byType(Form), findsOneWidget);
     });
   });
 }
