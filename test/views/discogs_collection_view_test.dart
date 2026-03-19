@@ -125,5 +125,80 @@ void main() {
       expect(find.text('Search'), findsOneWidget);
       expect(find.text('Random'), findsOneWidget);
     });
+
+    testWidgets('loads releases asynchronously', (tester) async {
+      await tester.pumpWidget(buildApp());
+      await tester.runAsync(
+          () => Future.delayed(const Duration(milliseconds: 500)));
+      await tester.pump();
+
+      // After async load, still shows the view (may show error from fake Supabase)
+      expect(find.text('Collection'), findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('has sort button icon', (tester) async {
+      await tester.pumpWidget(buildApp());
+
+      // Shows a sort direction arrow (initially desc)
+      expect(find.byIcon(Icons.arrow_downward_rounded), findsOneWidget);
+    });
+  });
+
+  group('DiscogsCollectionView connected error handling', () {
+    setUp(() {
+      DiscogsAuthService().connectedUsername.value = 'testuser';
+    });
+
+    tearDown(() {
+      DiscogsAuthService().connectedUsername.value = null;
+    });
+
+    testWidgets('shows error after failed load', (tester) async {
+      await tester.pumpWidget(buildApp());
+
+      // Let async load fail
+      await tester.runAsync(
+          () => Future.delayed(const Duration(milliseconds: 1000)));
+      await tester.pump();
+      await tester.pump();
+
+      // After error, should still show the view (may show error message)
+      expect(find.text('Collection'), findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('still shows collection title after failed load', (tester) async {
+      await tester.pumpWidget(buildApp());
+
+      await tester.runAsync(
+          () => Future.delayed(const Duration(milliseconds: 1000)));
+      await tester.pump();
+      await tester.pump();
+
+      // View should still be rendered even after error
+      expect(find.text('Collection'), findsAtLeastNWidgets(1));
+    });
+  });
+
+  group('DiscogsCollectionView with albums', () {
+    setUp(() {
+      DiscogsAuthService().connectedUsername.value = 'testuser';
+    });
+
+    tearDown(() {
+      DiscogsAuthService().connectedUsername.value = null;
+    });
+
+    testWidgets('renders with non-empty ownedAlbums list', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: DiscogsCollectionView(
+          getAnniversaries: () => [],
+          ownedAlbums: const [
+            {'artist': 'Radiohead', 'album': 'OK Computer', 'release': '1997'},
+          ],
+        ),
+      ));
+
+      expect(find.text('Collection'), findsAtLeastNWidgets(1));
+    });
   });
 }

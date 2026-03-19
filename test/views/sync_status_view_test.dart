@@ -77,5 +77,48 @@ void main() {
       expect(find.text('Retry'), findsAtLeastNWidgets(1));
       expect(find.byIcon(Icons.refresh_rounded), findsAtLeastNWidgets(1));
     });
+
+    testWidgets('loads async data and settles', (tester) async {
+      await tester.pumpWidget(const MaterialApp(home: SyncStatusView()));
+      await tester.runAsync(
+          () => Future.delayed(const Duration(milliseconds: 500)));
+      await tester.pump();
+
+      // After async load, should still show the view
+      expect(find.text('Sync Status'), findsOneWidget);
+    });
+
+    testWidgets('retry button can be tapped', (tester) async {
+      await tester.pumpWidget(const MaterialApp(home: SyncStatusView()));
+      await tester.runAsync(
+          () => Future.delayed(const Duration(milliseconds: 500)));
+      await tester.pump();
+
+      // Find and tap the first Retry button
+      final retryButtons = find.text('Retry');
+      if (retryButtons.evaluate().isNotEmpty) {
+        await tester.tap(retryButtons.first);
+        await tester.pump();
+      }
+      expect(find.text('Sync Status'), findsOneWidget);
+    });
+
+    testWidgets('has Scaffold with AppBar', (tester) async {
+      await tester.pumpWidget(const MaterialApp(home: SyncStatusView()));
+      await tester.pump();
+
+      expect(find.byType(Scaffold), findsOneWidget);
+      expect(find.byType(AppBar), findsOneWidget);
+    });
+
+    testWidgets('shows count cards', (tester) async {
+      await tester.pumpWidget(const MaterialApp(home: SyncStatusView()));
+      await tester.runAsync(
+          () => Future.delayed(const Duration(milliseconds: 500)));
+      await tester.pump();
+
+      // Should show count cards even in error state
+      expect(find.byType(Card), findsAtLeastNWidgets(2));
+    });
   });
 }

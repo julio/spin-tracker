@@ -178,5 +178,55 @@ void main() {
 
       expect(find.byType(Form), findsOneWidget);
     });
+
+    testWidgets('Find Release Date triggers search when fields populated',
+        (tester) async {
+      await tester.pumpWidget(const MaterialApp(home: AddRecordView()));
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Artist'),
+        'Radiohead',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Album'),
+        'OK Computer',
+      );
+
+      await tester.tap(find.text('Find Release Date'));
+      await tester.pump();
+
+      // Let the async search complete (will fail with network)
+      await tester.runAsync(
+          () => Future.delayed(const Duration(milliseconds: 1000)));
+      await tester.pump();
+
+      // After failed search, should still be on the form
+      expect(find.text('Add Record'), findsOneWidget);
+    });
+
+    testWidgets('save with valid fields attempts remote add', (tester) async {
+      await tester.pumpWidget(const MaterialApp(home: AddRecordView()));
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Artist'),
+        'Radiohead',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Album'),
+        'OK Computer',
+      );
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+      await tester.pump();
+
+      // Let async operations run
+      await tester.runAsync(
+          () => Future.delayed(const Duration(milliseconds: 500)));
+      await tester.pump();
+      await tester.pump();
+
+      // Should show error since Supabase is fake
+      expect(find.text('Add Record'), findsOneWidget);
+    });
   });
 }

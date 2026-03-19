@@ -8,8 +8,18 @@ import 'auth_service.dart';
 /// Reads from in-memory cache. Writes to Supabase, then refreshes cache.
 /// Enforces freemium tier limits.
 class DataRepository {
-  static final DataRepository _instance = DataRepository._();
+  static DataRepository _instance = DataRepository._();
   factory DataRepository() => _instance;
+
+  @visibleForTesting
+  static void setInstanceForTesting(DataRepository repo) {
+    _instance = repo;
+  }
+
+  @visibleForTesting
+  static void resetInstance() {
+    _instance = DataRepository._();
+  }
 
   DataRepository._()
       : _remote = SupabaseDataService(),
